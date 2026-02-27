@@ -39,18 +39,21 @@ function getInitials(name: string) {
 const roleLabel: Record<User["role"], string> = {
   MASTER_ADMIN: "Master Admin",
   COMPANY_ADMIN: "Admin Empresa",
+  MANAGER: "Gerente",
   EMPLOYEE: "Técnico",
 };
 
 const roleIcon: Record<User["role"], React.ReactNode> = {
   MASTER_ADMIN: <Crown className="w-3 h-3" />,
   COMPANY_ADMIN: <Building2 className="w-3 h-3" />,
+  MANAGER: <ShieldCheck className="w-3 h-3" />,
   EMPLOYEE: <Users className="w-3 h-3" />,
 };
 
 const roleVariant: Record<User["role"], "default" | "blue" | "secondary"> = {
   MASTER_ADMIN: "default",
   COMPANY_ADMIN: "blue",
+  MANAGER: "blue",
   EMPLOYEE: "secondary",
 };
 
