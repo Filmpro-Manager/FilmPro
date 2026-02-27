@@ -37,13 +37,19 @@ import { cn } from "@/lib/utils";
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 const STATUS_LABELS: Record<QuoteStatus, string> = {
-  draft: "Gerado",
-  sent:  "Enviado",
+  draft:     "Gerado",
+  sent:      "Enviado",
+  converted: "Convertido",
+  expired:   "Expirado",
+  rejected:  "Recusado",
 };
 
 const STATUS_CLASSES: Record<QuoteStatus, string> = {
-  draft: "bg-slate-100 text-slate-600 border-slate-200",
-  sent:  "bg-green-100 text-green-700 border-green-300",
+  draft:     "bg-slate-100 text-slate-600 border-slate-200",
+  sent:      "bg-green-100 text-green-700 border-green-300",
+  converted: "bg-blue-100 text-blue-700 border-blue-300",
+  expired:   "bg-orange-100 text-orange-700 border-orange-300",
+  rejected:  "bg-red-100 text-red-700 border-red-300",
 };
 
 function fmtDate(dateStr?: string): string {

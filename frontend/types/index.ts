@@ -17,7 +17,7 @@ export type FilmType =
 
 export type TransactionType = "income" | "expense";
 
-export type QuoteStatus = "draft" | "sent";
+export type QuoteStatus = "draft" | "sent" | "converted" | "expired" | "rejected";
 
 export type GoalType =
   | "revenue"
