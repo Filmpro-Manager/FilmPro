@@ -1,0 +1,312 @@
+@import "tailwindcss";
+
+:root {
+  --background: 0 0% 97%;
+  --foreground: 220 20% 10%;
+  --card: 0 0% 100%;
+  --card-foreground: 220 20% 10%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 20% 10%;
+  --primary: 221 83% 53%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 15% 94%;
+  --secondary-foreground: 220 20% 20%;
+  --muted: 220 15% 95%;
+  --muted-foreground: 220 10% 50%;
+  --accent: 220 15% 92%;
+  --accent-foreground: 220 20% 15%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 15% 88%;
+  --input: 220 15% 88%;
+  --ring: 221 83% 53%;
+  --radius: 0.625rem;
+}
+
+.dark {
+  --background: 220 20% 8%;
+  --foreground: 220 15% 93%;
+  --card: 220 20% 11%;
+  --card-foreground: 220 15% 93%;
+  --popover: 220 20% 11%;
+  --popover-foreground: 220 15% 93%;
+  --primary: 221 83% 58%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 20% 18%;
+  --secondary-foreground: 220 15% 85%;
+  --muted: 220 20% 16%;
+  --muted-foreground: 220 10% 55%;
+  --accent: 220 20% 18%;
+  --accent-foreground: 220 15% 88%;
+  --destructive: 0 65% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 20% 20%;
+  --input: 220 20% 18%;
+  --ring: 221 83% 58%;
+}
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 8px);
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-feature-settings: "rlig" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  letter-spacing: -0.025em;
+  font-weight: 600;
+}
+
+::selection {
+  background: hsl(var(--primary) / 0.2);
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.4);
+}
+
+/* ─── Modal / Dialog animations (Radix UI data-state) ──────────────────── */
+
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes overlay-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+@keyframes dialog-in {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.95); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1);    }
+}
+@keyframes dialog-out {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1);    }
+  to   { opacity: 0; transform: translate(-50%, -48%) scale(0.95); }
+}
+@keyframes popup-in {
+  from { opacity: 0; transform: scale(0.95) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);     }
+}
+@keyframes popup-out {
+  from { opacity: 1; transform: scale(1)    translateY(0);     }
+  to   { opacity: 0; transform: scale(0.95) translateY(-4px);  }
+}
+
+/* Overlay */
+[data-radix-dialog-overlay][data-state="open"]   { animation: overlay-in  180ms ease both; }
+[data-radix-dialog-overlay][data-state="closed"] { animation: overlay-out 150ms ease both; }
+
+/* Dialog content */
+[data-radix-dialog-content][data-state="open"]   { animation: dialog-in  220ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+[data-radix-dialog-content][data-state="closed"] { animation: dialog-out 150ms ease both; }
+
+/* Alert dialog */
+[data-radix-alert-dialog-overlay][data-state="open"]   { animation: overlay-in  180ms ease both; }
+[data-radix-alert-dialog-overlay][data-state="closed"] { animation: overlay-out 150ms ease both; }
+[data-radix-alert-dialog-content][data-state="open"]   { animation: dialog-in  220ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+[data-radix-alert-dialog-content][data-state="closed"] { animation: dialog-out 150ms ease both; }
+
+/* Dropdown / Select / Popover / Tooltip */
+[data-radix-popper-content-wrapper] [data-state="open"]  { animation: popup-in  180ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+[data-radix-popper-content-wrapper] [data-state="closed"]{ animation: popup-out 130ms ease both; }
+
+/* ─── Keyframes ─────────────────────────────────────────────────────────── */
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pop-in {
+  0%   { opacity: 0; transform: scale(0.85); }
+  70%  { transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position:  200% 0; }
+}
+
+/* ─── Animation utilities ───────────────────────────────────────────────── */
+
+.animate-fade-in-up    { animation: fade-in-up    0.25s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-fade-in       { animation: fade-in        0.2s ease both; }
+.animate-scale-in      { animation: scale-in       0.18s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-slide-in-left { animation: slide-in-left  0.2s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-slide-in-right{ animation: slide-in-right 0.2s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-pop-in        { animation: pop-in         0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* Stagger filhos (até 12 itens) */
+.stagger-children > * { animation: fade-in-up 0.22s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.stagger-children > *:nth-child(1)  { animation-delay:   0ms; }
+.stagger-children > *:nth-child(2)  { animation-delay:  40ms; }
+.stagger-children > *:nth-child(3)  { animation-delay:  80ms; }
+.stagger-children > *:nth-child(4)  { animation-delay: 120ms; }
+.stagger-children > *:nth-child(5)  { animation-delay: 160ms; }
+.stagger-children > *:nth-child(6)  { animation-delay: 200ms; }
+.stagger-children > *:nth-child(7)  { animation-delay: 240ms; }
+.stagger-children > *:nth-child(8)  { animation-delay: 280ms; }
+.stagger-children > *:nth-child(9)  { animation-delay: 320ms; }
+.stagger-children > *:nth-child(10) { animation-delay: 360ms; }
+.stagger-children > *:nth-child(11) { animation-delay: 400ms; }
+.stagger-children > *:nth-child(12) { animation-delay: 440ms; }
+
+/* Stagger rápido — para listas densas */
+.stagger-fast > * { animation: fade-in-up 0.18s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.stagger-fast > *:nth-child(1)  { animation-delay:  0ms; }
+.stagger-fast > *:nth-child(2)  { animation-delay: 25ms; }
+.stagger-fast > *:nth-child(3)  { animation-delay: 50ms; }
+.stagger-fast > *:nth-child(4)  { animation-delay: 75ms; }
+.stagger-fast > *:nth-child(5)  { animation-delay: 100ms; }
+.stagger-fast > *:nth-child(6)  { animation-delay: 125ms; }
+.stagger-fast > *:nth-child(7)  { animation-delay: 150ms; }
+.stagger-fast > *:nth-child(8)  { animation-delay: 175ms; }
+
+/* Linhas de tabela — entrada escalonada */
+tbody tr {
+  animation: fade-in-up 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+tbody tr:nth-child(1)  { animation-delay:  0ms; }
+tbody tr:nth-child(2)  { animation-delay: 25ms; }
+tbody tr:nth-child(3)  { animation-delay: 50ms; }
+tbody tr:nth-child(4)  { animation-delay: 75ms; }
+tbody tr:nth-child(5)  { animation-delay: 100ms; }
+tbody tr:nth-child(6)  { animation-delay: 125ms; }
+tbody tr:nth-child(7)  { animation-delay: 150ms; }
+tbody tr:nth-child(8)  { animation-delay: 175ms; }
+tbody tr:nth-child(9)  { animation-delay: 200ms; }
+tbody tr:nth-child(10) { animation-delay: 225ms; }
+
+/* ─── Global transitions suaves ─────────────────────────────────────────── */
+
+a, button {
+  transition-property: color, background-color, border-color, opacity, box-shadow, transform;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Card hover lift */
+[data-card-hover] {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+[data-card-hover]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -4px hsl(var(--foreground) / 0.08);
+}
+
+/* Textarea focus igual ao input */
+textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px hsl(var(--ring) / 0.12);
+  border-color: hsl(var(--ring));
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+/* Select focus */
+select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px hsl(var(--ring) / 0.12);
+  transition: box-shadow 0.15s ease;
+}
+
+/* ─── Mobile ─────────────────────────────────────────────────────────────── */
+
+/* Previne iOS de aumentar fontes ao rotacionar */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Scroll suave em iOS */
+* {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Safe-area para dispositivos com notch/barra home */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Toque mínimo de 44px para acessibilidade mobile */
+@media (max-width: 768px) {
+  button, [role="button"] {
+    min-height: 36px;
+  }
+}
+
+/* Impede overflow horizontal na página inteira */
+body {
+  overflow-x: hidden;
+}

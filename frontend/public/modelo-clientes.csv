@@ -1,0 +1,11 @@
+nome,telefone,documento,tipo_documento,email,data_nascimento,veiculo_marca,veiculo_modelo,veiculo_placa,veiculo_cor,veiculo_ano,observacoes
+João Silva,11999990001,123.456.789-00,cpf,joao@email.com,1990-05-15,Toyota,Corolla,ABC1234,Prata,2020,Cliente preferencial
+Maria Oliveira,21988880002,987.654.321-00,cpf,maria@email.com,1985-11-22,Honda,Civic,DEF5678,Preto,2019,
+Carlos Souza,31977770003,12.345.678/0001-90,cnpj,carlos@empresa.com,,Volkswagen,Golf,GHI9012,Branco,2021,Empresa
+Ana Costa,41966660004,,,,ana.costa@hotmail.com,1993-07-30,Ford,Fiesta,JKL3456,Vermelho,2018,
+Pedro Lima,51955550005,111.222.333-44,cpf,pedro@email.com,1978-02-10,Chevrolet,Onix,MNO7890,Cinza,2022,VIP
+Fernanda Rocha,61944440006,,,,fernanda@email.com,,Hyundai,HB20,PQR1234,Azul,2020,
+Ricardo Mendes,71933330007,555.666.777-88,cpf,ricardo@email.com,2000-04-18,Nissan,March,STU5678,Branco,2017,
+Juliana Pinto,81922220008,,,,juliana@email.com,,,,,,Sem veículo cadastrado
+Bruno Ferreira,91911110009,999.888.777-66,cpf,bruno@email.com,1995-09-05,Fiat,Uno,VWX9012,Prata,2016,
+Camila Alves,11900000010,,,,camila@email.com,1988-12-20,Jeep,Renegade,YZA3456,Verde,2023,Cliente novo
