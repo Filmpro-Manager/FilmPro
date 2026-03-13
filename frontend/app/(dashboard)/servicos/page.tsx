@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Pencil, Power, PowerOff, Car, Home, Building2, Trash2 } from "lucide-react";
+import { Plus, Pencil, Power, PowerOff, Car, Landmark, Trash2 } from "lucide-react";
 import { useServiceCatalogStore } from "@/store/service-catalog-store";
 import type { ServiceCatalog, ServiceCategory } from "@/types";
 import { PageHeader } from "@/components/shared/page-header";
@@ -17,20 +17,17 @@ import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 const CATEGORY_LABEL: Record<ServiceCategory | "all", string> = {
   all:          "Todos",
   automotive:   "Automotivo",
-  residential:  "Residencial",
-  commercial:   "Comercial",
+  architecture: "Arquitetura",
 };
 
 const CATEGORY_ICON: Record<ServiceCategory, React.ElementType> = {
-  automotive:  Car,
-  residential: Home,
-  commercial:  Building2,
+  automotive:   Car,
+  architecture: Landmark,
 };
 
 const CATEGORY_COLOR: Record<ServiceCategory, string> = {
-  automotive:  "bg-blue-500/10 text-blue-500",
-  residential: "bg-emerald-500/10 text-emerald-500",
-  commercial:  "bg-violet-500/10 text-violet-500",
+  automotive:   "bg-blue-500/10 text-blue-500",
+  architecture: "bg-violet-500/10 text-violet-500",
 };
 
 type CategoryFilter = ServiceCategory | "all";
@@ -56,8 +53,7 @@ export default function ServicosPage() {
   const counts = useMemo(() => ({
     all:         services.length,
     automotive:  services.filter((s) => s.category === "automotive").length,
-    residential: services.filter((s) => s.category === "residential").length,
-    commercial:  services.filter((s) => s.category === "commercial").length,
+    architecture: services.filter((s) => s.category === "architecture").length,
   }), [services]);
 
   function openNew() {
@@ -92,7 +88,7 @@ export default function ServicosPage() {
         />
 
         <div className="flex gap-1 flex-wrap">
-          {(["all", "automotive", "residential", "commercial"] as CategoryFilter[]).map((cat) => (
+          {(["all", "automotive", "architecture"] as CategoryFilter[]).map((cat) => (
             <button
               key={cat}
               onClick={() => setTab(cat)}

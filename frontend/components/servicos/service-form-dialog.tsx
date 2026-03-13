@@ -24,8 +24,7 @@ import { FormField } from "@/components/shared/form-field";
 
 const CATEGORY_LABELS: Record<string, string> = {
   automotive: "Automotivo",
-  residential: "Residencial",
-  commercial: "Comercial",
+  architecture: "Arquitetura",
 };
 
 interface ServiceFormDialogProps {
@@ -134,8 +133,7 @@ export function ServiceFormDialog({ open, onOpenChange, service }: ServiceFormDi
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="automotive">Automotivo</SelectItem>
-                    <SelectItem value="residential">Residencial</SelectItem>
-                    <SelectItem value="commercial">Comercial</SelectItem>
+                    <SelectItem value="architecture">Arquitetura</SelectItem>
                   </SelectContent>
                 </Select>
               )}

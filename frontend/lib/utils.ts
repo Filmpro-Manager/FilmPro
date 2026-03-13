@@ -36,22 +36,26 @@ export function formatDocument(doc: string): string {
 
 export function appointmentStatusLabel(status: AppointmentStatus): string {
   const map: Record<AppointmentStatus, string> = {
-    scheduled: "Agendado",
+    draft:       "Rascunho",
+    scheduled:   "Agendado",
     in_progress: "Em Andamento",
-    completed: "Finalizado",
-    cancelled: "Cancelado",
+    completed:   "Finalizado",
+    cancelled:   "Cancelado",
+    created:     "Criada",
   };
   return map[status];
 }
 
 export function appointmentStatusColor(
   status: AppointmentStatus
-): "blue" | "yellow" | "green" | "red" {
-  const map: Record<AppointmentStatus, "blue" | "yellow" | "green" | "red"> = {
-    scheduled: "blue",
+): "blue" | "yellow" | "green" | "red" | "gray" | "violet" {
+  const map: Record<AppointmentStatus, "blue" | "yellow" | "green" | "red" | "gray" | "violet"> = {
+    draft:       "gray",
+    scheduled:   "blue",
     in_progress: "yellow",
-    completed: "green",
-    cancelled: "red",
+    completed:   "green",
+    cancelled:   "red",
+    created:     "violet",
   };
   return map[status];
 }
@@ -59,7 +63,7 @@ export function appointmentStatusColor(
 export function filmTypeLabel(type: FilmType): string {
   const map: Record<FilmType, string> = {
     automotive: "Automotiva",
-    residential: "Residencial",
+    architecture: "Arquitetônica",
     security: "Segurança",
     decorative: "Decorativa",
     solar: "Solar",

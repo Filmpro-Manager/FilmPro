@@ -176,7 +176,7 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="automotive">Automotiva</SelectItem>
-                  <SelectItem value="residential">Residencial</SelectItem>
+                  <SelectItem value="architecture">Arquitetônica</SelectItem>
                   <SelectItem value="security">Segurança</SelectItem>
                   <SelectItem value="decorative">Decorativa</SelectItem>
                   <SelectItem value="solar">Solar</SelectItem>

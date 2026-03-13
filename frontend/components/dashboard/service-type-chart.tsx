@@ -11,19 +11,12 @@ const COLORS = ["hsl(221,83%,53%)", "hsl(160,60%,45%)", "hsl(38,90%,55%)", "hsl(
 function categorize(serviceType: string): string {
   const lower = serviceType.toLowerCase();
   if (
-    lower.includes("residencial") ||
+    lower.includes("arquitetura") ||
+    lower.includes("arquitet") ||
     lower.includes("solar") ||
-    lower.includes("condom") ||
     lower.includes("ambiente")
   )
-    return "Residencial";
-  if (
-    lower.includes("seguran") ||
-    lower.includes("safety") ||
-    lower.includes("corporativa") ||
-    lower.includes("comercial")
-  )
-    return "Segurança / Comercial";
+    return "Arquitetura";
   return "Automotivo";
 }
 
@@ -52,9 +45,8 @@ export function ServiceTypeChart({ period }: ServiceTypeChartProps) {
     data.length > 0
       ? data
       : [
-          { name: "Automotivo", value: 68 },
-          { name: "Residencial", value: 22 },
-          { name: "Segurança / Comercial", value: 10 },
+          { name: "Automotivo", value: 60 },
+          { name: "Arquitetura", value: 40 },
         ];
 
   return (

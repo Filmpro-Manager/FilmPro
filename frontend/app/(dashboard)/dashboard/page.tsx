@@ -132,6 +132,7 @@ export default function DashboardPage() {
           icon={Wallet}
           variant={cur.caixa >= 0 ? "default" : "destructive"}
           sub="transações pagas"
+          size="lg"
         />
         <DashKpiCard
           label="A Receber"
@@ -140,6 +141,7 @@ export default function DashboardPage() {
           icon={ArrowDownCircle}
           variant="success"
           sub="cobranças pendentes"
+          size="lg"
         />
         <DashKpiCard
           label="A Pagar"
@@ -148,6 +150,7 @@ export default function DashboardPage() {
           icon={ArrowUpCircle}
           variant={cur.aPagar > cur.caixa ? "warning" : "default"}
           sub="despesas pendentes"
+          size="lg"
         />
       </div>
 

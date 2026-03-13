@@ -36,7 +36,7 @@ export const useQuotesStore = create<QuotesState>((set) => ({
         q.id === id
           ? {
               ...q,
-              status: "sent" as QuoteStatus,
+              status: "approved" as QuoteStatus,
               convertedAt: new Date().toISOString().slice(0, 10),
               convertedToAppointmentId: appointmentId,
             }

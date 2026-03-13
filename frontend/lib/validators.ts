@@ -34,7 +34,7 @@ export const clientSchema = z.object({
 export const productSchema = z.object({
   brand: z.string().min(1, "Marca obrigatória"),
   model: z.string().min(1, "Modelo obrigatório"),
-  type: z.enum(["automotive", "residential", "security", "decorative", "solar"]),
+  type: z.enum(["automotive", "architecture", "security", "decorative", "solar"]),
   transparency: z.number().min(1, "Transparência mínima 1%").max(100, "Transparência máxima 100%"),
   availableMeters: z.number().min(0, "Valor não pode ser negativo"),
   costPrice: z.number().min(0.01, "Custo inválido"),
@@ -61,7 +61,7 @@ export const appointmentSchema = z
     isRework: z.boolean().optional(),
     reworkReason: z.string().optional(),
     notes: z.string().optional(),
-    status: z.enum(["scheduled", "in_progress", "completed", "cancelled"]),
+    status: z.enum(["draft", "scheduled", "in_progress", "completed", "cancelled", "created"]),
   })
   .refine(
     (d) => {
@@ -159,6 +159,7 @@ export type CompanyModulesInput = z.infer<typeof companyModulesSchema>;
 
 export const quickServiceSchema = z.object({
   clientId: z.string().min(1, "Selecione um cliente"),
+  category: z.enum(["automotive", "architecture"]).optional(),
   serviceType: z.string().min(1, "Tipo de serviço obrigatório"),
   employeeId: z.string().min(1, "Selecione o responsável"),
   date: z.string().min(1, "Data obrigatória"),
@@ -176,7 +177,7 @@ export const serviceCatalogSchema = z.object({
   name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres"),
   description: z.string().optional(),
   price: z.number().min(0.01, "Preço inválido"),
-  category: z.enum(["automotive", "residential", "commercial"]),
+  category: z.enum(["automotive", "architecture"]),
   isActive: z.boolean(),
 });
 
@@ -209,7 +210,7 @@ export const quotePaymentSchema = z.object({
 
 export const quoteSchema = z.object({
   // categoria
-  category: z.enum(["automotive", "residential"]).optional(),
+  category: z.enum(["automotive", "architecture"]).optional(),
   // datas (geradas automaticamente)
   issueDate: z.string().optional(),
   validUntil: z.string().optional(),
@@ -219,7 +220,7 @@ export const quoteSchema = z.object({
   clientEmail: z.string().optional(),
   subject: z
     .object({
-      type: z.enum(["vehicle", "residence", "commercial", "other"]).default("vehicle"),
+      type: z.enum(["vehicle", "building", "other"]).default("vehicle"),
       // veículo
       brand: z.string().optional(),
       model: z.string().optional(),

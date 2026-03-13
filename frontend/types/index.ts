@@ -3,21 +3,23 @@
 export type UserRole = "MASTER_ADMIN" | "COMPANY_ADMIN" | "MANAGER" | "EMPLOYEE";
 
 export type AppointmentStatus =
+  | "draft"
   | "scheduled"
   | "in_progress"
   | "completed"
-  | "cancelled";
+  | "cancelled"
+  | "created";
 
 export type FilmType =
   | "automotive"
-  | "residential"
+  | "architecture"
   | "security"
   | "decorative"
   | "solar";
 
 export type TransactionType = "income" | "expense";
 
-export type QuoteStatus = "draft" | "sent" | "converted" | "expired" | "rejected";
+export type QuoteStatus = "draft" | "sent" | "approved" | "converted" | "expired" | "rejected";
 
 export type GoalType =
   | "revenue"
@@ -47,10 +49,11 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: UserRole;
+  role: UserRole | string;
   employeeId?: string;
   active: boolean;
   companyId?: string;
+  storeId?: string | null;
   createdAt: string;
   avatar?: string;
 }
@@ -229,6 +232,7 @@ export interface Appointment {
   reworkReason?: string;
   materialsUsed?: MaterialUsage[];
   notes?: string;
+  category?: ServiceCategory;  // automotivo | arquitetura
 }
 
 // ─── Transactions ─────────────────────────────────────────────────────────────
@@ -277,8 +281,8 @@ export interface QuoteItem {
   vehicleId?: string;
 }
 
-export type QuoteCategory = "automotive" | "residential" | "commercial";
-export type QuoteSubjectType = "vehicle" | "residence" | "commercial" | "other";
+export type QuoteCategory = "automotive" | "architecture";
+export type QuoteSubjectType = "vehicle" | "building" | "other";
 
 export interface QuoteSubject {
   type: QuoteSubjectType;
@@ -405,7 +409,7 @@ export interface InvoiceItem {
 
 // ─── Service Catalog ─────────────────────────────────────────────────────────
 
-export type ServiceCategory = "automotive" | "residential" | "commercial";
+export type ServiceCategory = "automotive" | "architecture";
 
 export interface ServiceCatalog {
   id: string;

@@ -243,7 +243,7 @@ export const mockProducts: Product[] = [
     id: "p5",
     brand: "Llumar",
     model: "R Silver 20",
-    type: "residential",
+    type: "architecture",
     transparency: 20,
     availableMeters: 6.5,
     costPrice: 38,
@@ -366,6 +366,7 @@ export const mockAppointments: Appointment[] = [
     clientId: "c5",
     clientName: "Patrícia Souza",
     vehicle: "Chevrolet Tracker — JKL-4G56",
+    category: "automotive" as const,
     serviceType: "Insulfilm Automotivo Completo",
     employeeId: "e2",
     employeeName: "Rafael Costa",
@@ -381,6 +382,7 @@ export const mockAppointments: Appointment[] = [
     clientId: "c3",
     clientName: "Nova Construção LTDA",
     vehicle: "",
+    category: "architecture" as const,
     serviceType: "Proteção Solar Residencial — 3 ambientes",
     employeeId: "e2",
     employeeName: "Rafael Costa",
@@ -395,6 +397,7 @@ export const mockAppointments: Appointment[] = [
     clientId: "c1",
     clientName: "Bruno Almeida",
     vehicle: "Toyota Corolla — ABC-1D23",
+    category: "automotive" as const,
     serviceType: "Revisão e Substituição Parcial",
     employeeId: "e2",
     employeeName: "Rafael Costa",
@@ -423,6 +426,7 @@ export const mockAppointments: Appointment[] = [
     clientId: "c2",
     clientName: "Fernanda Rocha",
     vehicle: "Honda HR-V — DEF-2E34",
+    category: "automotive" as const,
     serviceType: "Insulfilm Automotivo Completo",
     employeeId: "e2",
     employeeName: "Rafael Costa",
@@ -437,6 +441,7 @@ export const mockAppointments: Appointment[] = [
     clientId: "c1",
     clientName: "Bruno Almeida",
     vehicle: "Toyota Corolla — ABC-1D23",
+    category: "automotive" as const,
     serviceType: "Película de Segurança",
     employeeId: "e2",
     employeeName: "Rafael Costa",
@@ -1284,7 +1289,7 @@ export const mockServiceCatalog: ServiceCatalog[] = [
   {
     id: "svc7",
     name: "Janela residencial",
-    category: "residential",
+    category: "architecture",
     price: 120,
     description: "Por janela, vidro residencial simples",
     isActive: true,
@@ -1293,7 +1298,7 @@ export const mockServiceCatalog: ServiceCatalog[] = [
   {
     id: "svc8",
     name: "Sala completa",
-    category: "residential",
+    category: "architecture",
     price: 500,
     description: "Todos os vidros de uma sala",
     isActive: true,
@@ -1302,7 +1307,7 @@ export const mockServiceCatalog: ServiceCatalog[] = [
   {
     id: "svc9",
     name: "Escritório comercial",
-    category: "commercial",
+    category: "architecture",
     price: 800,
     description: "Cobertura completa de vidros de um escritório",
     isActive: true,
@@ -1395,7 +1400,7 @@ export const mockQuotes: Quote[] = [
   {
     id: "q3",
     number: "ORC-2025-015",
-    category: "residential",
+    category: "architecture",
     issueDate: "2025-12-15",
     validUntil: "2025-12-31",
     status: "expired",
@@ -1425,7 +1430,7 @@ export const mockQuotes: Quote[] = [
   {
     id: "q4",
     number: "ORC-2026-003",
-    category: "commercial",
+    category: "architecture",
     issueDate: "2026-02-10",
     validUntil: "2026-03-10",
     status: "sent",
@@ -1696,3 +1701,4 @@ export const mockAlerts: Alert[] = [
     createdAt: "2026-02-12T08:00:00Z",
   },
 ];
+

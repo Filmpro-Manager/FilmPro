@@ -168,6 +168,7 @@ export function QuickServiceDialog({ open, onOpenChange }: QuickServiceDialogPro
       paid: data.paid,
       notes: data.notes,
       materialsUsed: usedMaterials,
+      ...(data.category ? { category: data.category } : {}),
     });
 
     if (usedMaterials.length > 0) {
@@ -215,6 +216,25 @@ export function QuickServiceDialog({ open, onOpenChange }: QuickServiceDialogPro
                           {c.name}{c.vehicle ? ` — ${c.vehicle.plate}` : ""}
                         </SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </FormField>
+
+            {/* Categoria */}
+            <FormField label="Categoria" htmlFor="category" className="sm:col-span-2">
+              <Controller
+                name="category"
+                control={control}
+                render={({ field }) => (
+                  <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                    <SelectTrigger id="category">
+                      <SelectValue placeholder="Selecione a categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="automotive">🚗 Automotivo</SelectItem>
+                      <SelectItem value="architecture">🏗️ Arquitetura</SelectItem>
                     </SelectContent>
                   </Select>
                 )}

@@ -1,54 +1,83 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { User, UserRole } from "@/types";
-import { mockUsers } from "@/data/mock";
+import type { User } from "@/types";
+import { apiLogin } from "@/lib/api";
+
+// Helpers para sincronizar o token num cookie (lido pelo middleware)
+function setTokenCookie(token: string) {
+  const maxAge = 7 * 24 * 60 * 60; // 7 dias
+  document.cookie = `filmpro-auth-token=${token}; path=/; max-age=${maxAge}; SameSite=Lax`;
+}
+
+function removeTokenCookie() {
+  document.cookie = 'filmpro-auth-token=; path=/; max-age=0';
+}
 
 interface AuthStore {
   user: User | null;
+  token: string | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  hasRole: (...roles: UserRole[]) => boolean;
+  hasRole: (...roles: string[]) => boolean;
+  setActiveStore: (storeId: string) => void;
 }
 
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set, get) => ({
       user: null,
+      token: null,
       isAuthenticated: false,
 
       login: async (email, password) => {
-        await new Promise((r) => setTimeout(r, 600));
+        try {
+          const { token, user } = await apiLogin(email, password);
 
-        const found = mockUsers.find(
-          (u) => u.email === email && u.active
-        );
+          const mappedUser: User = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role as User["role"],
+            active: true,
+            companyId: user.companyId,
+            storeId: user.storeId ?? null,
+            createdAt: new Date().toISOString(),
+          };
 
-        if (!found) {
-          return { success: false, error: "Credenciais inválidas ou usuário inativo." };
+          set({ user: mappedUser, token, isAuthenticated: true });
+          setTokenCookie(token);
+          return { success: true };
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Erro ao autenticar";
+          return { success: false, error: message };
         }
-
-        if (password !== "123456") {
-          return { success: false, error: "Credenciais inválidas ou usuário inativo." };
-        }
-
-        set({ user: found, isAuthenticated: true });
-        return { success: true };
       },
 
       logout: () => {
-        set({ user: null, isAuthenticated: false });
+        removeTokenCookie();
+        set({ user: null, token: null, isAuthenticated: false });
+      },
+
+      setActiveStore: (storeId) => {
+        set((state) => ({
+          user: state.user ? { ...state.user, storeId } : null,
+        }));
       },
 
       hasRole: (...roles) => {
         const { user } = get();
         if (!user) return false;
-        return roles.includes(user.role);
+        return roles.includes(user.role as string);
       },
     }),
     {
       name: "filmpro-auth",
-      partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
+      partialize: (state) => ({
+        user: state.user,
+        token: state.token,
+        isAuthenticated: state.isAuthenticated,
+      }),
     }
   )
 );

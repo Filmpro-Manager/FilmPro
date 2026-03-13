@@ -72,7 +72,7 @@ const PAYMENT_METHODS = [
 
 const FILM_TYPE_LABELS: Record<string, string> = {
   automotive: "Automotiva",
-  residential: "Residencial / Arquitetônica",
+  architecture: "Arquitetônica",
   security: "Segurança",
   decorative: "Decorativa",
   solar: "Solar",
@@ -92,7 +92,7 @@ const CATEGORY_OPTIONS: {
       "border-sky-500 bg-sky-50 dark:bg-sky-950/30 text-sky-700 dark:text-sky-300",
   },
   {
-    value: "residential",
+    value: "architecture",
     label: "Arquitetura",
     icon: Building2,
     activeClass:
@@ -157,7 +157,7 @@ export function QuoteFormDialog({
   const filteredServices = catalogServices.filter((s) => {
     if (!s.isActive) return false;
     if (quoteCategory === "automotive") return s.category === "automotive";
-    return s.category === "residential" || s.category === "commercial";
+    return s.category === "architecture";
   });
 
   const previewService =

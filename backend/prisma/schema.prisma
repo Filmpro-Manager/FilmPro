@@ -1,0 +1,98 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────
+// COMPANY
+// ─────────────────────────────────────────
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  phone     String
+  status    String   @default("active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  stores    Store[]
+  users     User[]
+
+  @@map("companies")
+}
+
+// ─────────────────────────────────────────
+// STORE
+// ─────────────────────────────────────────
+model Store {
+  id                 String   @id @default(uuid())
+  companyId          String   @map("company_id")
+  company            Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  name               String
+  logoUrl            String?  @map("logo_url")
+  razaoSocial        String   @map("razao_social")
+  nomeFantasia       String   @map("nome_fantasia")
+  cnpj               String   @unique
+  phone              String
+  email              String
+
+  addressStreet      String   @map("address_street")
+  addressNumber      String   @map("address_number")
+  addressComplement  String?  @map("address_complement")
+  addressDistrict    String   @map("address_district")
+  addressZipcode     String   @map("address_zipcode")
+  addressCity        String   @map("address_city")
+  addressState       String   @map("address_state")
+
+  setupCompleted     Boolean  @default(false) @map("setup_completed")
+  status             String   @default("active")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  users              User[]
+
+  @@map("stores")
+}
+
+// ─────────────────────────────────────────
+// USER
+// ─────────────────────────────────────────
+model User {
+  id           String   @id @default(uuid())
+  companyId    String   @map("company_id")
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  storeId      String?  @map("store_id")
+  store        Store?   @relation(fields: [storeId], references: [id], onDelete: SetNull)
+
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  phone        String
+
+  role         String   @default("employee")
+  status       String   @default("active")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────
+// MASTER USER (dono do SaaS)
+// ─────────────────────────────────────────
+model MasterUser {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("master_users")
+}
+

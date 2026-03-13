@@ -16,8 +16,7 @@ import {
   ArrowRightCircle,
   Mail,
   Car,
-  Home,
-  Building2,
+  Landmark,
   Package,
   CreditCard,
   FileText,
@@ -37,8 +36,9 @@ import { cn } from "@/lib/utils";
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 const STATUS_LABELS: Record<QuoteStatus, string> = {
-  draft:     "Gerado",
+  draft:     "Pendente",
   sent:      "Enviado",
+  approved:  "Aprovado",
   converted: "Convertido",
   expired:   "Expirado",
   rejected:  "Recusado",
@@ -47,6 +47,7 @@ const STATUS_LABELS: Record<QuoteStatus, string> = {
 const STATUS_CLASSES: Record<QuoteStatus, string> = {
   draft:     "bg-slate-100 text-slate-600 border-slate-200",
   sent:      "bg-green-100 text-green-700 border-green-300",
+  approved:  "bg-violet-100 text-violet-700 border-violet-300",
   converted: "bg-blue-100 text-blue-700 border-blue-300",
   expired:   "bg-orange-100 text-orange-700 border-orange-300",
   rejected:  "bg-red-100 text-red-700 border-red-300",
@@ -121,9 +122,8 @@ export function QuoteDetailDialog({
 
   const sub = quote.subject;
   const isVehicle = sub?.type === "vehicle";
-  const isResidence = sub?.type === "residence";
-  const isCommercial = sub?.type === "commercial";
-  const SubIcon = isVehicle ? Car : isResidence ? Home : isCommercial ? Building2 : Package;
+  const isBuilding = sub?.type === "building";
+  const SubIcon = isVehicle ? Car : isBuilding ? Landmark : Package;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -170,13 +170,13 @@ export function QuoteDetailDialog({
               </Button>
             )}
 
-            {onConvert && (
+            {onConvert && ["draft", "sent"].includes(quote.status) && (
               <Button
                 size="sm"
-                variant="outline"
+                variant="default"
                 onClick={() => { onConvert(quote!); onOpenChange(false); }}
               >
-                <ArrowRightCircle className="h-3.5 w-3.5 mr-1.5" /> OS
+                <ArrowRightCircle className="h-3.5 w-3.5 mr-1.5" /> Converter em OS
               </Button>
             )}
 
@@ -230,9 +230,7 @@ export function QuoteDetailDialog({
                     "mt-3 flex flex-wrap items-center gap-3 text-sm border-2 rounded-xl px-4 py-3",
                     isVehicle
                       ? "bg-sky-50 dark:bg-sky-900/20 border-sky-200 dark:border-sky-800 text-sky-800 dark:text-sky-300"
-                      : isResidence
-                      ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300"
-                      : isCommercial
+                      : isBuilding
                       ? "bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800 text-violet-800 dark:text-violet-300"
                       : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300"
                   )}
@@ -242,9 +240,7 @@ export function QuoteDetailDialog({
                       "h-4 w-4 shrink-0",
                       isVehicle
                         ? "text-sky-600"
-                        : isResidence
-                        ? "text-emerald-600"
-                        : isCommercial
+                        : isBuilding
                         ? "text-violet-600"
                         : "text-amber-600"
                     )}
@@ -262,7 +258,7 @@ export function QuoteDetailDialog({
                       {sub.color && <span className="opacity-70">{sub.color}</span>}
                     </>
                   )}
-                  {(isResidence || isCommercial) && (
+                  {isBuilding && (
                     <>
                       {sub.address && (
                         <span className="flex items-center gap-1.5">

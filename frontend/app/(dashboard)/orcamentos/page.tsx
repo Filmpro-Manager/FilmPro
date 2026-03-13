@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   Plus,
   Trash2,
@@ -33,15 +34,17 @@ import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import { QuoteFormDialog } from "@/components/orcamentos/quote-form-dialog";
 import { QuoteDetailDialog } from "@/components/orcamentos/quote-detail-dialog";
 import { useQuotesStore } from "@/store/quotes-store";
+import { useServicesStore } from "@/store/services-store";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { Quote, TableColumn, QuoteStatus } from "@/types";
+import type { Quote, TableColumn, QuoteStatus, Appointment } from "@/types";
 import { cn } from "@/lib/utils";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_LABELS: Record<QuoteStatus, string> = {
-  draft:     "Gerado",
+  draft:     "Pendente",
   sent:      "Enviado",
+  approved:  "Aprovado",
   converted: "Convertido",
   expired:   "Expirado",
   rejected:  "Recusado",
@@ -50,6 +53,7 @@ const STATUS_LABELS: Record<QuoteStatus, string> = {
 const STATUS_CLASSES: Record<QuoteStatus, string> = {
   draft:     "bg-slate-100 text-slate-700 border-slate-200",
   sent:      "bg-green-100 text-green-700 border-green-300",
+  approved:  "bg-violet-100 text-violet-700 border-violet-300",
   converted: "bg-blue-100 text-blue-700 border-blue-300",
   expired:   "bg-orange-100 text-orange-700 border-orange-300",
   rejected:  "bg-red-100 text-red-700 border-red-300",
@@ -74,6 +78,7 @@ const SORT_LABELS: Record<SortKey, string> = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function OrcamentosPage() {
+  const router = useRouter();
   const [tab, setTab] = useState<"all" | QuoteStatus>("all");
 
   // Filtros
@@ -91,7 +96,50 @@ export default function OrcamentosPage() {
   const [detailTarget, setDetailTarget] = useState<Quote | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
-  const { quotes, deleteQuote, updateStatus } = useQuotesStore();
+  const { quotes, deleteQuote, updateStatus, convertToAppointment } = useQuotesStore();
+  const { addService } = useServicesStore();
+
+  // ─── Converter orçamento em OS ──────────────────────────────────────────────
+  function handleConvert(quote: Quote) {
+    const sub = quote.subject;
+    let vehicle = "—";
+    if (sub?.type === "vehicle") {
+      const parts = [sub.brand, sub.model, sub.year].filter(Boolean).join(" ");
+      vehicle = sub.plate ? `${parts} — ${sub.plate}` : parts || "—";
+    } else if (sub?.address) {
+      vehicle = sub.address;
+    } else if (sub?.description) {
+      vehicle = sub.description;
+    }
+
+    const serviceType =
+      quote.items.find((i) => i.type === "service")?.name ??
+      quote.items[0]?.name ??
+      "Serviço";
+
+    const newOsId = `svc-${Date.now()}`;
+    const today = new Date().toISOString().slice(0, 10);
+
+    const newOs: Appointment = {
+      id: newOsId,
+      clientId: quote.clientId,
+      clientName: quote.clientName,
+      vehicle,
+      serviceType,
+      employeeId: "",
+      employeeName: "",
+      quoteId: quote.id,
+      date: today,
+      status: "draft",
+      value: quote.totalValue,
+      notes: quote.notes ?? quote.internalNotes ?? "",
+    };
+
+    addService(newOs);
+    convertToAppointment(quote.id, newOsId);
+    setDetailTarget(null);
+    router.push(`/ordens-de-servico/nova?id=${newOsId}`);
+  }
 
   const availableYears = useMemo(() => {
     const years = new Set(quotes.map((q) => q.createdAt.slice(0, 4)));
@@ -288,8 +336,9 @@ export default function OrcamentosPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <TabsList>
             <TabsTrigger value="all">Todos</TabsTrigger>
-            <TabsTrigger value="draft">Gerados</TabsTrigger>
+            <TabsTrigger value="draft">Pendentes</TabsTrigger>
             <TabsTrigger value="sent">Enviados</TabsTrigger>
+            <TabsTrigger value="approved">Aprovados</TabsTrigger>
           </TabsList>
 
           <div className="flex items-center gap-2 flex-wrap">
@@ -362,7 +411,7 @@ export default function OrcamentosPage() {
                     <SelectContent>
                       <SelectItem value="all">Todas</SelectItem>
                       <SelectItem value="automotive">Automotivo</SelectItem>
-                      <SelectItem value="residential">Residencial</SelectItem>
+                      <SelectItem value="architecture">Arquitetura</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -399,7 +448,7 @@ export default function OrcamentosPage() {
             {search && <FilterChip label={`"${search}"`} onRemove={() => setSearch("")} />}
             {filterMonth !== "all" && <FilterChip label={MONTHS[Number(filterMonth) - 1]} onRemove={() => setFilterMonth("all")} />}
             {filterYear !== "all" && <FilterChip label={filterYear} onRemove={() => setFilterYear("all")} />}
-            {filterCategory !== "all" && <FilterChip label={filterCategory === "automotive" ? "Automotivo" : "Residencial"} onRemove={() => setFilterCategory("all")} />}
+            {filterCategory !== "all" && <FilterChip label={filterCategory === "automotive" ? "Automotivo" : "Arquitetura"} onRemove={() => setFilterCategory("all")} />}
             {filterMinValue && <FilterChip label={`≥ R$ ${filterMinValue}`} onRemove={() => setFilterMinValue("")} />}
             {filterMaxValue && <FilterChip label={`≤ R$ ${filterMaxValue}`} onRemove={() => setFilterMaxValue("")} />}
             <button onClick={clearFilters} className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 ml-1">
@@ -424,6 +473,7 @@ export default function OrcamentosPage() {
         onOpenChange={(open) => !open && setDetailTarget(null)}
         quote={detailTarget}
         onEdit={(q) => { setDetailTarget(null); openEdit(q); }}
+        onConvert={handleConvert}
         onStatusChange={(id, status) => updateStatus(id, status)}
       />
 
