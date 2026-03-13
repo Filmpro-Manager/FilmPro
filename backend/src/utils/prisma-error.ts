@@ -1,10 +1,10 @@
-import { Prisma } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 export function handlePrismaError(e: unknown, context?: { entity?: string; field?: string }): never {
   const entity = context?.entity ?? 'Registro';
   const field = context?.field ?? 'campo';
 
-  if (e instanceof Prisma.PrismaClientKnownRequestError) {
+  if (e instanceof PrismaClientKnownRequestError) {
     switch (e.code) {
       case 'P2002':
         throw Object.assign(
