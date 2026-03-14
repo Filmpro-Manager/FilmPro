@@ -10,6 +10,8 @@ import {
   ArrowUpCircle,
 } from "lucide-react";
 
+import { useAuthStore } from "@/store/auth-store";
+import { EmployeeDashboard } from "@/components/dashboard/employee-dashboard";
 import { DashFilterBar, buildFilter } from "@/components/dashboard/dash-filter-bar";
 import { DashKpiCard } from "@/components/dashboard/dash-kpi-card";
 import { DashRevenueTrend } from "@/components/dashboard/dash-revenue-trend";
@@ -72,6 +74,7 @@ function prevPeriod(filter: DashFilter): { from: string; to: string } {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const { user } = useAuthStore();
   const [filter, setFilter] = useState<DashFilter>(() => buildFilter("mes"));
 
   const services     = useServicesStore((s) => s.services);
@@ -90,6 +93,11 @@ export default function DashboardPage() {
       prev: calcFinanceiro(transactions, pp.from, pp.to),
     };
   }, [transactions, filter]);
+
+  // Funcionários têm um dashboard próprio, sem dados financeiros
+  if (user?.role === "EMPLOYEE") {
+    return <EmployeeDashboard />;
+  }
 
   return (
     <div className="space-y-5">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Plus, AlertTriangle, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
@@ -10,10 +10,17 @@ import { DataTable } from "@/components/shared/data-table";
 import { ProductFormDialog } from "@/components/estoque/product-form-dialog";
 import { StockMovementDialog } from "@/components/estoque/stock-movement-dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { mockStockMovements } from "@/data/mock";
-import { useProductsStore } from "@/store/products-store";
+import { useProductsStore, mapApiItemToProduct } from "@/store/products-store";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import { formatCurrency, filmTypeLabel, isLowStock, formatDate } from "@/lib/utils";
+import {
+  apiGetInventoryItems,
+  apiDeleteInventoryItem,
+  apiGetInventoryMovements,
+  type ApiInventoryMovement,
+} from "@/lib/api";
+import { useAuthStore } from "@/store/auth-store";
+import { toast } from "sonner";
 import type { Product, TableColumn } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -22,9 +29,48 @@ export default function EstoquePage() {
   const [openForm, setOpenForm] = useState(false);
   const [openMovement, setOpenMovement] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [movements, setMovements] = useState<ApiInventoryMovement[]>([]);
+  const [loadingMovements, setLoadingMovements] = useState(false);
   const products = useProductsStore((s) => s.products);
+  const setProducts = useProductsStore((s) => s.setProducts);
   const deleteProduct = useProductsStore((s) => s.deleteProduct);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const token = useAuthStore((s) => s.token) ?? "";
+
+  const loadItems = useCallback(async () => {
+    try {
+      const items = await apiGetInventoryItems(token);
+      setProducts(items.map(mapApiItemToProduct));
+    } catch {
+      toast.error("Erro ao carregar estoque");
+    }
+  }, [token, setProducts]);
+
+  const loadMovements = useCallback(async () => {
+    setLoadingMovements(true);
+    try {
+      const data = await apiGetInventoryMovements(token);
+      setMovements(data);
+    } catch {
+      toast.error("Erro ao carregar movimentações");
+    } finally {
+      setLoadingMovements(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    loadItems();
+  }, [loadItems]);
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    try {
+      await apiDeleteInventoryItem(deleteTarget.id, token);
+      deleteProduct(deleteTarget.id);
+    } catch {
+      toast.error("Erro ao excluir item");
+    }
+  }
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -135,31 +181,35 @@ export default function EstoquePage() {
     },
   ];
 
-  const movementColumns: TableColumn<(typeof mockStockMovements)[0]>[] = [
+  const movementColumns: TableColumn<ApiInventoryMovement>[] = [
     {
-      key: "date",
+      key: "createdAt",
       header: "Data",
-      render: (row) => <span>{formatDate(row.date, "dd/MM/yy HH:mm")}</span>,
+      render: (row) => <span>{formatDate(row.createdAt, "dd/MM/yy HH:mm")}</span>,
     },
     {
-      key: "productName",
+      key: "inventoryItem",
       header: "Produto",
+      render: (row) => <span>{row.inventoryItem.brand} {row.inventoryItem.name}</span>,
     },
     {
       key: "type",
       header: "Tipo",
       render: (row) => (
-        <Badge variant={row.type === "in" ? "success" : "destructive"}>
-          {row.type === "in" ? "Entrada" : "Saída"}
+        <Badge variant={row.type === "entrada" ? "success" : row.type === "saida" ? "destructive" : "secondary"}>
+          {row.type === "entrada" ? "Entrada" : row.type === "saida" ? "Saída" : "Ajuste"}
         </Badge>
       ),
     },
     {
       key: "quantity",
-      header: "Qtd (m)",
+      header: "Qtd",
       render: (row) => (
-        <span className={cn("font-medium", row.type === "in" ? "text-emerald-600 dark:text-emerald-400" : "text-destructive")}>
-          {row.type === "in" ? "+" : "-"}{row.quantity}m
+        <span className={cn(
+          "font-medium",
+          row.type === "entrada" ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
+        )}>
+          {row.type === "entrada" ? "+" : "-"}{row.quantity}m
         </span>
       ),
       className: "text-right",
@@ -167,10 +217,12 @@ export default function EstoquePage() {
     {
       key: "reason",
       header: "Motivo",
+      render: (row) => <span>{row.reason ?? "—"}</span>,
     },
     {
-      key: "userName",
+      key: "user",
       header: "Usuário",
+      render: (row) => <span>{row.user.name}</span>,
     },
   ];
 
@@ -186,7 +238,7 @@ export default function EstoquePage() {
         </Button>
       </PageHeader>
 
-      <Tabs defaultValue="products">
+      <Tabs defaultValue="products" onValueChange={(v) => { if (v === "movements") loadMovements(); }}>
         <TabsList>
           <TabsTrigger value="products">Películas</TabsTrigger>
           <TabsTrigger value="movements">Movimentações</TabsTrigger>
@@ -210,28 +262,28 @@ export default function EstoquePage() {
         <TabsContent value="movements" className="mt-4">
           <DataTable
             columns={movementColumns}
-            data={mockStockMovements}
+            data={movements}
             keyField="id"
-            emptyMessage="Nenhuma movimentação registrada."
+            emptyMessage={loadingMovements ? "Carregando..." : "Nenhuma movimentação registrada."}
           />
         </TabsContent>
       </Tabs>
 
       <ProductFormDialog
         open={openForm}
-        onOpenChange={setOpenForm}
+        onOpenChange={(v) => { setOpenForm(v); if (!v) loadItems(); }}
         product={editProduct}
       />
       <StockMovementDialog
         open={openMovement}
-        onOpenChange={setOpenMovement}
+        onOpenChange={(v) => { setOpenMovement(v); if (!v) { loadItems(); loadMovements(); } }}
       />
       <ConfirmDeleteDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
         itemName={deleteTarget?.name ?? ""}
         itemType="película"
-        onConfirm={() => { if (deleteTarget) deleteProduct(deleteTarget.id); }}
+        onConfirm={handleDelete}
       />
     </div>
   );

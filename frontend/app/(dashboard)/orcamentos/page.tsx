@@ -34,6 +34,7 @@ import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import { QuoteFormDialog } from "@/components/orcamentos/quote-form-dialog";
 import { QuoteDetailDialog } from "@/components/orcamentos/quote-detail-dialog";
 import { useQuotesStore } from "@/store/quotes-store";
+import { useAuthStore } from "@/store/auth-store";
 import { useServicesStore } from "@/store/services-store";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Quote, TableColumn, QuoteStatus, Appointment } from "@/types";
@@ -98,6 +99,7 @@ export default function OrcamentosPage() {
 
   const { quotes, deleteQuote, updateStatus, convertToAppointment } = useQuotesStore();
   const { addService } = useServicesStore();
+  const isEmployee = useAuthStore((s) => s.user?.role === "EMPLOYEE");
 
   // ─── Converter orçamento em OS ──────────────────────────────────────────────
   function handleConvert(quote: Quote) {
@@ -218,7 +220,7 @@ export default function OrcamentosPage() {
   function openNew() { setEditTarget(undefined); setOpenForm(true); }
   function openEdit(quote: Quote) { setEditTarget(quote); setOpenForm(true); }
 
-  const columns: TableColumn<Quote>[] = [
+  const allColumns: TableColumn<Quote>[] = [
     {
       key: "number",
       header: "Número",
@@ -298,6 +300,8 @@ export default function OrcamentosPage() {
     },
   ];
 
+  const columns = allColumns.filter((col) => !isEmployee || col.key !== "totalValue");
+
   return (
     <div className="space-y-6">
       <PageHeader title="Orçamentos" description="Gerencie propostas comerciais e acompanhe a taxa de conversão">
@@ -313,21 +317,27 @@ export default function OrcamentosPage() {
           <p className="text-2xl font-bold">{stats.total}</p>
           <p className="text-xs text-muted-foreground">{stats.thisMonth} criado{stats.thisMonth !== 1 ? "s" : ""} este mês</p>
         </CardContent></Card>
-        <Card><CardContent className="p-4">
-          <p className="text-xs text-muted-foreground mb-1">Valor total</p>
-          <p className="text-2xl font-bold tabular-nums">{formatCurrency(stats.totalValue)}</p>
-          <p className="text-xs text-muted-foreground">soma de todos os orçamentos</p>
-        </CardContent></Card>
-        <Card><CardContent className="p-4">
-          <p className="text-xs text-muted-foreground mb-1">Em aberto</p>
-          <p className="text-2xl font-bold tabular-nums text-yellow-500">{formatCurrency(stats.openValue)}</p>
-          <p className="text-xs text-muted-foreground">orçamentos não enviados</p>
-        </CardContent></Card>
-        <Card><CardContent className="p-4">
-          <p className="text-xs text-muted-foreground mb-1">Ticket médio</p>
-          <p className="text-2xl font-bold tabular-nums">{formatCurrency(stats.avgTicket)}</p>
-          <p className="text-xs text-muted-foreground">por orçamento</p>
-        </CardContent></Card>
+        {!isEmployee && (
+          <Card><CardContent className="p-4">
+            <p className="text-xs text-muted-foreground mb-1">Valor total</p>
+            <p className="text-2xl font-bold tabular-nums">{formatCurrency(stats.totalValue)}</p>
+            <p className="text-xs text-muted-foreground">soma de todos os orçamentos</p>
+          </CardContent></Card>
+        )}
+        {!isEmployee && (
+          <Card><CardContent className="p-4">
+            <p className="text-xs text-muted-foreground mb-1">Em aberto</p>
+            <p className="text-2xl font-bold tabular-nums text-yellow-500">{formatCurrency(stats.openValue)}</p>
+            <p className="text-xs text-muted-foreground">orçamentos não enviados</p>
+          </CardContent></Card>
+        )}
+        {!isEmployee && (
+          <Card><CardContent className="p-4">
+            <p className="text-xs text-muted-foreground mb-1">Ticket médio</p>
+            <p className="text-2xl font-bold tabular-nums">{formatCurrency(stats.avgTicket)}</p>
+            <p className="text-xs text-muted-foreground">por orçamento</p>
+          </CardContent></Card>
+        )}
       </div>
 
       {/* Tabs + Filtros + Tabela */}

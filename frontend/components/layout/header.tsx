@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bell, LogOut, Settings, Moon, Sun, Menu, Zap } from "lucide-react";
+import { Bell, LogOut, Settings, Moon, Sun, Menu, Zap, Store } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth-store";
@@ -91,14 +91,23 @@ export function Header({ onMenuToggle, className }: HeaderProps) {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {hasRole("COMPANY_ADMIN", "MASTER_ADMIN") && (
-              <DropdownMenuItem
-                onClick={() => router.push("/configuracoes/empresa")}
-                className="cursor-pointer"
-              >
-                <Settings className="mr-2 h-4 w-4" />
-                Configurações da Empresa
-              </DropdownMenuItem>
+            {hasRole("OWNER") && (
+              <>
+                <DropdownMenuItem
+                  onClick={() => router.push("/selecionar-loja")}
+                  className="cursor-pointer"
+                >
+                  <Store className="mr-2 h-4 w-4" />
+                  Trocar de Loja
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => router.push("/configuracoes/empresa")}
+                  className="cursor-pointer"
+                >
+                  <Settings className="mr-2 h-4 w-4" />
+                  Configurações da Empresa
+                </DropdownMenuItem>
+              </>
             )}
             <DropdownMenuSeparator />
             <DropdownMenuItem

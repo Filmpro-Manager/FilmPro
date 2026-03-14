@@ -7,10 +7,10 @@ import {
   Store, Building2, ChevronRight, AlertCircle,
 } from "lucide-react";
 import { useAuthStore } from "@/store/auth-store";
-import { apiGetStores, type StoreOption } from "@/lib/api";
+import { apiGetStores, apiSelectStore, type StoreOption } from "@/lib/api";
 
 export default function SelecionarLojaPage() {
-  const { user, token, logout, setActiveStore } = useAuthStore();
+  const { user, token, logout, setActiveStore, setToken } = useAuthStore();
   const router = useRouter();
   const [stores, setStores] = useState<StoreOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,7 +19,7 @@ export default function SelecionarLojaPage() {
 
   useEffect(() => {
     if (!user || !token) { router.replace("/login"); return; }
-    if (user.role !== "owner") { router.replace("/dashboard"); return; }
+    if (user.role !== "OWNER") { router.replace("/dashboard"); return; }
 
     apiGetStores(user.companyId!, token)
       .then(setStores)
@@ -27,10 +27,17 @@ export default function SelecionarLojaPage() {
       .finally(() => setLoading(false));
   }, [user, token, router]);
 
-  function handleSelectStore(store: StoreOption) {
+  async function handleSelectStore(store: StoreOption) {
     setSelecting(store.id);
-    setActiveStore(store.id);
-    router.push("/dashboard");
+    try {
+      const { token: newToken } = await apiSelectStore(store.id, token!);
+      setToken(newToken);
+      setActiveStore(store.id);
+      router.push("/dashboard");
+    } catch {
+      setSelecting(null);
+      setError("Erro ao selecionar loja. Tente novamente.");
+    }
   }
 
   function handleLogout() {

@@ -56,6 +56,10 @@ model Store {
   createdAt          DateTime @default(now()) @map("created_at")
 
   users              User[]
+  clients            Client[]
+  vehicles           Vehicle[]
+  inventoryItems     InventoryItem[]
+  inventoryMovements InventoryMovement[]
 
   @@map("stores")
 }
@@ -76,11 +80,59 @@ model User {
   passwordHash String   @map("password_hash")
   phone        String
 
+  // Roles: owner | manager | employee
   role         String   @default("employee")
   status       String   @default("active")
   createdAt    DateTime @default(now()) @map("created_at")
 
+  inventoryMovements InventoryMovement[]
+
   @@map("users")
+}
+
+// ─────────────────────────────────────────
+// CLIENT
+// ─────────────────────────────────────────
+model Client {
+  id        String   @id @default(uuid())
+  storeId   String   @map("store_id")
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  name      String
+  phone     String?
+  email     String?
+  document  String?  // CPF ou CNPJ
+  notes     String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt       @map("updated_at")
+
+  vehicles  Vehicle[]
+
+  @@map("clients")
+}
+
+// ─────────────────────────────────────────
+// VEHICLE
+// ─────────────────────────────────────────
+model Vehicle {
+  id       String  @id @default(uuid())
+  clientId String  @map("client_id")
+  client   Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  storeId  String  @map("store_id")
+  store    Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  brand    String
+  model    String
+  year     Int?
+  plate    String?
+  color    String?
+  notes    String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("vehicles")
 }
 
 // ─────────────────────────────────────────
@@ -94,5 +146,53 @@ model MasterUser {
   createdAt    DateTime @default(now()) @map("created_at")
 
   @@map("master_users")
+}
+
+// ─────────────────────────────────────────
+// INVENTORY
+// ─────────────────────────────────────────
+model InventoryItem {
+  id          String   @id @default(uuid())
+  storeId     String   @map("store_id")
+  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  name        String
+  brand       String
+  type        String   // automotive | architecture | security | decorative | solar
+  unit        String   @default("m")
+  quantity    Float    @default(0)
+  minQuantity Float    @default(0)   @map("min_quantity")
+  costPrice   Float    @default(0)   @map("cost_price")
+  pricePerUnit Float   @default(0)   @map("price_per_unit")
+  transparency Int     @default(0)
+  sku         String?
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt      @map("updated_at")
+
+  movements   InventoryMovement[]
+
+  @@map("inventory_items")
+}
+
+model InventoryMovement {
+  id              String        @id @default(uuid())
+  storeId         String        @map("store_id")
+  store           Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  inventoryItemId String        @map("inventory_item_id")
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+
+  userId          String        @map("user_id")
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // entrada | saida | ajuste
+  type            String
+  quantity        Float
+  reason          String?
+
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("inventory_movements")
 }
 

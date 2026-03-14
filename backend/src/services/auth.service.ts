@@ -7,6 +7,31 @@ interface LoginInput {
   password: string;
 }
 
+export async function selectStore(userId: string, storeId: string, companyId: string) {
+  const store = await prisma.store.findFirst({
+    where: { id: storeId, companyId },
+  });
+
+  if (!store) {
+    throw Object.assign(new Error('Loja não encontrada ou sem acesso'), { statusCode: 403 });
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    throw Object.assign(new Error('Usuário não encontrado'), { statusCode: 404 });
+  }
+
+  const token = generateToken({
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    companyId: user.companyId,
+    storeId,
+  });
+
+  return { token };
+}
+
 export async function login(input: LoginInput) {
   const user = await prisma.user.findUnique({ where: { email: input.email } });
   if (!user) {

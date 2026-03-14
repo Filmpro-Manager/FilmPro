@@ -7,6 +7,8 @@ import { Loader2, MapPin, Car, ChevronDown, ChevronUp } from "lucide-react";
 import { clientSchema, type ClientInput } from "@/lib/validators";
 import { maskCEP, maskPhone, maskPlate, maskCPF, maskCNPJ } from "@/lib/masks";
 import { useClientsStore } from "@/store/clients-store";
+import { useAuthStore } from "@/store/auth-store";
+import { apiCreateClient, apiCreateVehicle, type ApiClient } from "@/lib/api";
 import { BRAND_NAMES, getModelsByBrand } from "@/data/car-brands";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -39,7 +41,6 @@ interface ClientFormDialogProps {
 
 export function ClientFormDialog({ open, onOpenChange }: ClientFormDialogProps) {
   const [showVehicle, setShowVehicle] = useState(false);
-  const [cepFilled, setCepFilled] = useState(false);
 
   const {
     register,
@@ -55,16 +56,34 @@ export function ClientFormDialog({ open, onOpenChange }: ClientFormDialogProps) 
   });
 
   const addClient = useClientsStore((s) => s.addClient);
+  const { token } = useAuthStore();
   const selectedBrand = watch("vehicleBrand") ?? "";
   const docType = watch("documentType");
   const models = getModelsByBrand(selectedBrand);
+
+  function mapApiClient(api: ApiClient, docType?: string, docValue?: string) {
+    const first = api.vehicles[0];
+    return {
+      id: api.id,
+      name: api.name,
+      phone: api.phone ?? "",
+      email: api.email ?? undefined,
+      document: api.document ?? undefined,
+      documentType: docType && docType !== "none" ? docType as "cpf" | "cnpj" : undefined,
+      notes: api.notes ?? undefined,
+      vehicles: api.vehicles.map((v) => ({ id: v.id, brand: v.brand, model: v.model, year: v.year ?? undefined, plate: v.plate ?? "", color: v.color ?? undefined })),
+      vehicle: first ? { id: first.id, brand: first.brand, model: first.model, year: first.year ?? undefined, plate: first.plate ?? "", color: first.color ?? undefined } : undefined,
+      serviceHistory: [] as [],
+      totalSpent: 0,
+      createdAt: api.createdAt,
+    };
+  }
 
   // ── Fecha/reseta o form ao fechar o dialog ────────────────────────────────
   function handleOpenChange(open: boolean) {
     if (!open) {
       reset();
       setShowVehicle(false);
-      setCepFilled(false);
     }
     onOpenChange(open);
   }
@@ -82,7 +101,6 @@ export function ClientFormDialog({ open, onOpenChange }: ClientFormDialogProps) 
         setValue("addressNeighborhood", json.bairro     ?? "", { shouldValidate: true });
         setValue("addressCity",         json.localidade ?? "", { shouldValidate: true });
         setValue("addressState",        json.uf         ?? "", { shouldValidate: true });
-        setCepFilled(true);
       } catch { /* silencia erro de rede */ }
     },
     [setValue]
@@ -90,45 +108,37 @@ export function ClientFormDialog({ open, onOpenChange }: ClientFormDialogProps) 
 
   // ── Submit ────────────────────────────────────────────────────────────────
   async function onSubmit(data: ClientInput) {
-    await new Promise((r) => setTimeout(r, 500));
+    if (!token) { toast.error("Sessão expirada"); return; }
 
-    const hasAddress = true; // endereço agora é obrigatório
     const hasVehicle = data.vehicleBrand || data.vehicleModel || data.vehiclePlate;
 
-    addClient({
-      id: crypto.randomUUID(),
-      name: data.name,
-      phone: data.phone,
-      notes: data.notes,
-      address: hasAddress ? {
-        zipCode:      data.addressZipCode      ?? "",
-        street:       data.addressStreet       ?? "",
-        number:       data.addressNumber       ?? "",
-        complement:   data.addressComplement,
-        neighborhood: data.addressNeighborhood ?? "",
-        city:         data.addressCity         ?? "",
-        state:        data.addressState        ?? "",
-      } : undefined,
-      vehicle: hasVehicle ? {
-        id:    crypto.randomUUID(),
-        brand: data.vehicleBrand ?? "",
-        model: data.vehicleModel ?? "",
-        plate: data.vehiclePlate ?? "",
-        color: data.vehicleColor,
-        year:  data.vehicleYear,
-      } : undefined,
-      document: data.documentType !== "none" ? data.document : undefined,
-      documentType: data.documentType !== "none" ? data.documentType as "cpf" | "cnpj" : undefined,
-      serviceHistory: [],
-      totalSpent: 0,
-      createdAt: new Date().toISOString(),
-    });
+    try {
+      const created = await apiCreateClient({
+        name: data.name,
+        phone: data.phone || undefined,
+        document: data.documentType !== "none" ? data.document : undefined,
+        notes: data.notes || undefined,
+      }, token);
 
-    toast.success("Cliente cadastrado!", { description: data.name });
-    reset();
-    setShowVehicle(false);
-    setCepFilled(false);
-    onOpenChange(false);
+      if (hasVehicle) {
+        const vehicle = await apiCreateVehicle(created.id, {
+          brand: data.vehicleBrand ?? "",
+          model: data.vehicleModel ?? "",
+          plate: data.vehiclePlate ?? undefined,
+          color: data.vehicleColor ?? undefined,
+          year: data.vehicleYear ?? undefined,
+        }, token);
+        created.vehicles = [vehicle];
+      }
+
+      addClient(mapApiClient(created, data.documentType, data.document));
+      toast.success("Cliente cadastrado!", { description: data.name });
+      reset();
+      setShowVehicle(false);
+      onOpenChange(false);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Erro ao cadastrar cliente");
+    }
   }
 
   return (
@@ -244,7 +254,6 @@ export function ClientFormDialog({ open, onOpenChange }: ClientFormDialogProps) 
                   onChange: (e) => {
                     const masked = maskCEP(e.target.value);
                     e.target.value = masked;
-                    if (masked.replace(/\D/g, "").length < 8) setCepFilled(false);
                     fetchCEP(masked);
                   },
                 })}
@@ -254,7 +263,6 @@ export function ClientFormDialog({ open, onOpenChange }: ClientFormDialogProps) 
             <FormField label="Estado (UF)" htmlFor="addressState" error={errors.addressState?.message}>
               <select
                 id="addressState"
-                disabled={cepFilled}
                 {...register("addressState")}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -266,7 +274,7 @@ export function ClientFormDialog({ open, onOpenChange }: ClientFormDialogProps) 
             </FormField>
 
             <FormField label="Rua / Logradouro" htmlFor="addressStreet" className="sm:col-span-2" error={errors.addressStreet?.message}>
-              <Input id="addressStreet" placeholder="Rua das Flores" readOnly={cepFilled} className={cepFilled ? "bg-muted cursor-not-allowed" : ""} {...register("addressStreet")} />
+              <Input id="addressStreet" placeholder="Rua das Flores" {...register("addressStreet")} />
             </FormField>
 
             <FormField label="Número" htmlFor="addressNumber">
@@ -278,11 +286,11 @@ export function ClientFormDialog({ open, onOpenChange }: ClientFormDialogProps) 
             </FormField>
 
             <FormField label="Bairro" htmlFor="addressNeighborhood" error={errors.addressNeighborhood?.message}>
-              <Input id="addressNeighborhood" placeholder="Centro" readOnly={cepFilled} className={cepFilled ? "bg-muted cursor-not-allowed" : ""} {...register("addressNeighborhood")} />
+              <Input id="addressNeighborhood" placeholder="Centro" {...register("addressNeighborhood")} />
             </FormField>
 
             <FormField label="Cidade" htmlFor="addressCity" error={errors.addressCity?.message}>
-              <Input id="addressCity" placeholder="São Paulo" readOnly={cepFilled} className={cepFilled ? "bg-muted cursor-not-allowed" : ""} {...register("addressCity")} />
+              <Input id="addressCity" placeholder="São Paulo" {...register("addressCity")} />
             </FormField>
           </div>
 

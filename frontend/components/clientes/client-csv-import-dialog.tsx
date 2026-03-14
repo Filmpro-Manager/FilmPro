@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Upload, Download, CheckCircle2, XCircle, AlertTriangle, FileText, X } from "lucide-react";
+import { Upload, Download, CheckCircle2, XCircle, AlertTriangle, FileText, X, Loader2 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useClientsStore } from "@/store/clients-store";
+import { useAuthStore } from "@/store/auth-store";
+import { apiCreateClient, apiCreateVehicle } from "@/lib/api";
+import { toast } from "sonner";
 import type { Client, Vehicle } from "@/types";
 
 // ─── CSV parser ────────────────────────────────────────────────────────────────
@@ -133,11 +136,13 @@ interface Props {
 
 export function ClientCsvImportDialog({ open, onOpenChange }: Props) {
   const addClients = useClientsStore((s) => s.addClients);
+  const { token }  = useAuthStore();
 
-  const [rows, setRows]         = useState<ParsedRow[]>([]);
-  const [fileName, setFileName] = useState("");
-  const [dragging, setDragging] = useState(false);
-  const [done, setDone]         = useState(false);
+  const [rows, setRows]           = useState<ParsedRow[]>([]);
+  const [fileName, setFileName]   = useState("");
+  const [dragging, setDragging]   = useState(false);
+  const [done, setDone]           = useState(false);
+  const [importing, setImporting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const validRows   = rows.filter((r) => r.errors.length === 0);
@@ -174,10 +179,68 @@ export function ClientCsvImportDialog({ open, onOpenChange }: Props) {
     if (file) handleFile(file);
   }, []);
 
-  function handleImport() {
-    const clients = validRows.map((r) => r.client!);
-    addClients(clients);
+  async function handleImport() {
+    if (!token) { toast.error("Sessão expirada"); return; }
+    setImporting(true);
+    const created: Client[] = [];
+    let failed = 0;
+
+    for (const row of validRows) {
+      try {
+        const api = await apiCreateClient({
+          name:     row.raw.nome,
+          phone:    row.raw.telefone    || undefined,
+          email:    row.raw.email       || undefined,
+          document: row.raw.documento   || undefined,
+          notes:    row.raw.observacoes || undefined,
+        }, token);
+
+        let vehicle: Vehicle | undefined;
+        if (row.raw.veiculo_marca || row.raw.veiculo_modelo || row.raw.veiculo_placa) {
+          const apiV = await apiCreateVehicle(api.id, {
+            brand: row.raw.veiculo_marca  || "—",
+            model: row.raw.veiculo_modelo || "—",
+            plate: row.raw.veiculo_placa  || undefined,
+            color: row.raw.veiculo_cor    || undefined,
+            year:  row.raw.veiculo_ano    ? Number(row.raw.veiculo_ano) : undefined,
+          }, token);
+          vehicle = {
+            id:    apiV.id,
+            brand: apiV.brand,
+            model: apiV.model,
+            plate: apiV.plate ?? "",
+            color: apiV.color ?? undefined,
+            year:  apiV.year  ?? undefined,
+          };
+        }
+
+        const tipoDoc = row.raw.tipo_documento.toLowerCase();
+        created.push({
+          id:           api.id,
+          name:         api.name,
+          phone:        api.phone    ?? "",
+          email:        api.email    ?? undefined,
+          document:     api.document ?? undefined,
+          documentType: tipoDoc === "cpf" || tipoDoc === "cnpj" ? tipoDoc : undefined,
+          birthDate:    row.raw.data_nascimento || undefined,
+          vehicle,
+          vehicles:     vehicle ? [vehicle] : [],
+          notes:        api.notes ?? undefined,
+          serviceHistory: [],
+          createdAt:    api.createdAt,
+          totalSpent:   0,
+        });
+      } catch {
+        failed++;
+      }
+    }
+
+    addClients(created);
+    setImporting(false);
     setDone(true);
+    if (failed > 0) {
+      toast.warning(`${failed} cliente${failed !== 1 ? "s" : ""} não puderam ser importados`);
+    }
   }
 
   function handleClose() {
@@ -376,10 +439,13 @@ export function ClientCsvImportDialog({ open, onOpenChange }: Props) {
               <Button variant="outline" size="sm" onClick={handleClose}>Cancelar</Button>
               <Button
                 size="sm"
-                disabled={validRows.length === 0}
+                disabled={validRows.length === 0 || importing}
                 onClick={handleImport}
               >
-                Importar {validRows.length} cliente{validRows.length !== 1 ? "s" : ""}
+                {importing
+                  ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Importando...</>
+                  : `Importar ${validRows.length} cliente${validRows.length !== 1 ? "s" : ""}`
+                }
               </Button>
             </div>
           </div>

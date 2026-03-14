@@ -46,7 +46,7 @@ export default function LoginPage() {
     }
 
     const loggedUser = useAuthStore.getState().user;
-    if (loggedUser?.role === "owner") {
+    if (loggedUser?.role === "OWNER") {
       router.push("/selecionar-loja");
     } else {
       router.push("/dashboard");

@@ -47,8 +47,8 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Dashboard",     href: "/dashboard",     icon: LayoutDashboard },
       { label: "Clientes",      href: "/clientes",      icon: Users },
-      { label: "Financeiro",    href: "/financeiro",    icon: TrendingUp },
-      { label: "Notas Fiscais", href: "/notas-fiscais", icon: FileText },
+      { label: "Financeiro",    href: "/financeiro",    icon: TrendingUp,  roles: ["OWNER", "MANAGER"] },
+      { label: "Notas Fiscais", href: "/notas-fiscais", icon: FileText,    roles: ["OWNER", "MANAGER"] },
     ],
   },
   {
@@ -58,25 +58,24 @@ const navGroups: NavGroup[] = [
       { label: "Ordens de Serviço", href: "/ordens-de-servico", icon: ClipboardList, module: "hasService" },
       { label: "Serviços",          href: "/servicos",          icon: Wrench,        module: "hasService" },
       { label: "Orçamentos",        href: "/orcamentos",        icon: FileSignature, module: "hasService" },
-      { label: "Estoque",           href: "/estoque",           icon: Package,       module: "hasProducts" },
+      { label: "Estoque",           href: "/estoque",           icon: Package,       roles: ["OWNER", "MANAGER"], module: "hasProducts" },
     ],
   },
   {
     label: "Gestão",
     items: [
-      { label: "Equipe",     href: "/equipe",                icon: UserCog,   roles: ["COMPANY_ADMIN","MANAGER","MASTER_ADMIN"], module: "hasTeam" },
-      { label: "Metas",      href: "/metas",                 icon: Target,    roles: ["COMPANY_ADMIN","MANAGER","MASTER_ADMIN"] },
-      { label: "Relatórios", href: "/relatorios",            icon: BarChart3, roles: ["COMPANY_ADMIN","MASTER_ADMIN"] },
-      { label: "Empresa",    href: "/configuracoes/empresa", icon: Building2, roles: ["COMPANY_ADMIN","MASTER_ADMIN"] },
+      { label: "Equipe",     href: "/equipe",                icon: UserCog,   roles: ["OWNER","MANAGER"], module: "hasTeam" },
+      { label: "Metas",      href: "/metas",                 icon: Target,    roles: ["OWNER","MANAGER"] },
+      { label: "Relatórios", href: "/relatorios",            icon: BarChart3, roles: ["OWNER"] },
+      { label: "Empresa",    href: "/configuracoes/empresa", icon: Building2, roles: ["OWNER"] },
     ],
   },
 ];
 
 const roleLabel: Record<string, string> = {
-  MASTER_ADMIN:  "Master Admin",
-  COMPANY_ADMIN: "Administrador",
-  MANAGER:       "Gerente",
-  EMPLOYEE:      "Funcionário",
+  OWNER:    "Dono",
+  MANAGER:  "Gerente",
+  EMPLOYEE: "Funcionário",
 };
 
 interface SidebarProps {

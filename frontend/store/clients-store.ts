@@ -1,9 +1,9 @@
 import { create } from "zustand";
 import type { Client } from "@/types";
-import { mockClients } from "@/data/mock";
 
 interface ClientsState {
   clients: Client[];
+  setClients: (clients: Client[]) => void;
   addClient: (client: Client) => void;
   addClients: (clients: Client[]) => void;
   updateClient: (client: Client) => void;
@@ -11,7 +11,9 @@ interface ClientsState {
 }
 
 export const useClientsStore = create<ClientsState>((set) => ({
-  clients: [...mockClients],
+  clients: [],
+
+  setClients: (clients) => set({ clients }),
 
   addClient: (client) =>
     set((state) => ({ clients: [client, ...state.clients] })),

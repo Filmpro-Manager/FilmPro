@@ -21,6 +21,7 @@ interface AuthStore {
   logout: () => void;
   hasRole: (...roles: string[]) => boolean;
   setActiveStore: (storeId: string) => void;
+  setToken: (token: string) => void;
 }
 
 export const useAuthStore = create<AuthStore>()(
@@ -38,7 +39,7 @@ export const useAuthStore = create<AuthStore>()(
             id: user.id,
             name: user.name,
             email: user.email,
-            role: user.role as User["role"],
+            role: (user.role as string).toUpperCase() as User["role"],
             active: true,
             companyId: user.companyId,
             storeId: user.storeId ?? null,
@@ -63,6 +64,11 @@ export const useAuthStore = create<AuthStore>()(
         set((state) => ({
           user: state.user ? { ...state.user, storeId } : null,
         }));
+      },
+
+      setToken: (token) => {
+        set({ token });
+        setTokenCookie(token);
       },
 
       hasRole: (...roles) => {

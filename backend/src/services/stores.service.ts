@@ -26,7 +26,7 @@ const ALLOWED_UPDATE_FIELDS = [
 ] as const;
 
 type UpdateStoreField = typeof ALLOWED_UPDATE_FIELDS[number];
-type UpdateStoreInput = Partial<Record<UpdateStoreField, string | boolean>>;
+type UpdateStoreInput = Partial<Record<UpdateStoreField, string | boolean | null>>;
 
 export async function getAll(companyId?: string) {
   return prisma.store.findMany({

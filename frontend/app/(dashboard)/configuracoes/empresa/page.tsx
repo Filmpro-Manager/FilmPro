@@ -13,12 +13,12 @@ export default function CompanySettingsPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (isAuthenticated && !hasRole("COMPANY_ADMIN", "MASTER_ADMIN")) {
+    if (isAuthenticated && !hasRole("OWNER")) {
       router.replace("/dashboard");
     }
   }, [isAuthenticated, hasRole, router]);
 
-  if (!isAuthenticated || !hasRole("COMPANY_ADMIN", "MASTER_ADMIN")) return null;
+  if (!isAuthenticated || !hasRole("OWNER")) return null;
 
   return (
     <div className="space-y-6 max-w-3xl">

@@ -3,11 +3,16 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth-store";
+import { useCompanyStore } from "@/store/company-store";
+import { apiGetStore } from "@/lib/api";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user  = useAuthStore((s) => s.user);
+  const token = useAuthStore((s) => s.token);
+  const { update } = useCompanyStore();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -20,6 +25,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       router.replace("/login");
     }
   }, [mounted, isAuthenticated, router]);
+
+  // Hidrata o company store com dados reais da API sempre que o storeId mudar
+  useEffect(() => {
+    if (!user?.storeId || !token) return;
+    apiGetStore(user.storeId, token)
+      .then((store) => {
+        update({
+          name: store.razaoSocial,
+          tradeName: store.nomeFantasia,
+          cnpj: store.cnpj,
+          phone: store.phone,
+          email: store.email,
+          logoUrl: store.logoUrl ?? undefined,
+          address: {
+            street: store.addressStreet,
+            number: store.addressNumber,
+            complement: store.addressComplement ?? undefined,
+            neighborhood: store.addressDistrict,
+            city: store.addressCity,
+            state: store.addressState,
+            zipCode: store.addressZipcode,
+          },
+        });
+      })
+      .catch(() => { /* ignora se offline */ });
+  }, [user?.storeId, token]);
 
   const handleDesktopToggle = useCallback(() => setCollapsed((v) => !v), []);
   const handleMobileToggle  = useCallback(() => setMobileOpen((v) => !v), []);

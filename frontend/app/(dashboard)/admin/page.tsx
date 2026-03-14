@@ -18,7 +18,6 @@ import {
   Lock,
   Unlock,
   Users,
-  Building2,
   Crown,
   AlertTriangle,
   Trash2,
@@ -37,22 +36,19 @@ function getInitials(name: string) {
 }
 
 const roleLabel: Record<User["role"], string> = {
-  MASTER_ADMIN: "Master Admin",
-  COMPANY_ADMIN: "Admin Empresa",
+  OWNER: "Dono",
   MANAGER: "Gerente",
   EMPLOYEE: "Técnico",
 };
 
 const roleIcon: Record<User["role"], React.ReactNode> = {
-  MASTER_ADMIN: <Crown className="w-3 h-3" />,
-  COMPANY_ADMIN: <Building2 className="w-3 h-3" />,
+  OWNER: <Crown className="w-3 h-3" />,
   MANAGER: <ShieldCheck className="w-3 h-3" />,
   EMPLOYEE: <Users className="w-3 h-3" />,
 };
 
 const roleVariant: Record<User["role"], "default" | "blue" | "secondary"> = {
-  MASTER_ADMIN: "default",
-  COMPANY_ADMIN: "blue",
+  OWNER: "default",
   MANAGER: "blue",
   EMPLOYEE: "secondary",
 };
@@ -69,18 +65,18 @@ export default function AdminPage() {
   const deleteUser = useUsersStore((s) => s.deleteUser);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
-  // Role guard — redirect non-masters
+  // Role guard — redirect non-owners
   useEffect(() => {
-    if (user && user.role !== "MASTER_ADMIN") {
+    if (user && user.role !== "OWNER") {
       router.replace("/dashboard");
     }
   }, [user, router]);
 
-  if (!user || user.role !== "MASTER_ADMIN") {
+  if (!user || user.role !== "OWNER") {
     return (
       <div className="flex flex-col items-center justify-center h-full py-24 gap-4 text-muted-foreground">
         <AlertTriangle className="w-10 h-10 text-destructive" />
-        <p className="text-sm">Acesso restrito ao Master Admin.</p>
+        <p className="text-sm">Acesso restrito ao Dono da empresa.</p>
       </div>
     );
   }
@@ -92,8 +88,8 @@ export default function AdminPage() {
 
     const matchTab =
       activeTab === "all" ||
-      (activeTab === "master" && u.role === "MASTER_ADMIN") ||
-      (activeTab === "admin" && u.role === "COMPANY_ADMIN") ||
+      (activeTab === "owner" && u.role === "OWNER") ||
+      (activeTab === "manager" && u.role === "MANAGER") ||
       (activeTab === "employee" && u.role === "EMPLOYEE");
 
     return matchSearch && matchTab;
@@ -101,8 +97,8 @@ export default function AdminPage() {
 
   const counts = {
     all: users.length,
-    master: users.filter((u) => u.role === "MASTER_ADMIN").length,
-    admin: users.filter((u) => u.role === "COMPANY_ADMIN").length,
+    owner: users.filter((u) => u.role === "OWNER").length,
+    manager: users.filter((u) => u.role === "MANAGER").length,
     employee: users.filter((u) => u.role === "EMPLOYEE").length,
     active: users.filter((u) => u.active).length,
   };
@@ -126,7 +122,7 @@ export default function AdminPage() {
         <div className="flex items-center gap-2">
           <Badge className="gap-1.5 text-xs">
             <ShieldCheck className="w-3 h-3" />
-            Master Admin
+            Dono
           </Badge>
           <Button size="sm" className="gap-2" onClick={handleNew}>
             <UserPlus className="w-4 h-4" />
@@ -151,19 +147,19 @@ export default function AdminPage() {
         <Card>
           <CardContent className="pt-4 pb-4">
             <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Crown className="w-3 h-3" /> Masters
+              <Crown className="w-3 h-3" /> Donos
             </p>
-            <p className="text-2xl font-bold mt-1">{counts.master}</p>
+            <p className="text-2xl font-bold mt-1">{counts.owner}</p>
             <p className="text-xs text-muted-foreground">acesso total</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4 pb-4">
             <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Building2 className="w-3 h-3" /> Admins
+              <ShieldCheck className="w-3 h-3" /> Gerentes
             </p>
-            <p className="text-2xl font-bold mt-1">{counts.admin}</p>
-            <p className="text-xs text-muted-foreground">gerem empresa</p>
+            <p className="text-2xl font-bold mt-1">{counts.manager}</p>
+            <p className="text-xs text-muted-foreground">gerem a loja</p>
           </CardContent>
         </Card>
         <Card>
@@ -198,8 +194,8 @@ export default function AdminPage() {
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList>
               <TabsTrigger value="all">Todos ({counts.all})</TabsTrigger>
-              <TabsTrigger value="master">Masters ({counts.master})</TabsTrigger>
-              <TabsTrigger value="admin">Admins ({counts.admin})</TabsTrigger>
+              <TabsTrigger value="owner">Donos ({counts.owner})</TabsTrigger>
+              <TabsTrigger value="manager">Gerentes ({counts.manager})</TabsTrigger>
               <TabsTrigger value="employee">
                 Técnicos ({counts.employee})
               </TabsTrigger>

@@ -119,15 +119,15 @@ function toLocalDateString(date: Date): string {
 }
 
 const roleLabel: Record<string, string> = {
-  COMPANY_ADMIN: "Administrador",
+  OWNER: "Dono",
+  MANAGER: "Gerente",
   EMPLOYEE: "Técnico",
-  MASTER_ADMIN: "Master Admin",
 };
 
 const roleVariant: Record<string, "blue" | "secondary" | "default"> = {
-  COMPANY_ADMIN: "blue",
+  OWNER: "default",
+  MANAGER: "blue",
   EMPLOYEE: "secondary",
-  MASTER_ADMIN: "default",
 };
 
 export default function EquipePage() {
@@ -166,7 +166,7 @@ export default function EquipePage() {
   // Summary counts
   const activeCount = employees.filter((e) => e.active).length;
   const adminCount = employees.filter(
-    (e) => e.userRole === "COMPANY_ADMIN"
+    (e) => e.userRole === "OWNER"
   ).length;
   const techCount = employees.filter(
     (e) => e.userRole === "EMPLOYEE"

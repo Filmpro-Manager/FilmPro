@@ -1,7 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCompanyStore } from "@/store/company-store";
+import { useAuthStore } from "@/store/auth-store";
+import { apiUpdateStore } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Film, ImagePlus, Trash2 } from "lucide-react";
@@ -13,9 +15,15 @@ const MAX_MB = 2;
 
 export function LogoUploadSection() {
   const { settings, update, removeLogo } = useCompanyStore();
+  const { user, token } = useAuthStore();
   const [preview, setPreview] = useState<string | undefined>(settings.logoUrl);
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Sincroniza preview quando o store hidrata com dados da API
+  useEffect(() => {
+    setPreview(settings.logoUrl);
+  }, [settings.logoUrl]);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -38,13 +46,28 @@ export function LogoUploadSection() {
   async function handleSave() {
     if (!preview || preview === settings.logoUrl) return;
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 400));
-    update({ logoUrl: preview });
-    setSaving(false);
-    toast.success("Logo atualizada com sucesso.");
+    try {
+      if (user?.storeId && token) {
+        await apiUpdateStore(user.storeId, { logoUrl: preview }, token);
+      }
+      update({ logoUrl: preview });
+      toast.success("Logo atualizada com sucesso.");
+    } catch {
+      toast.error("Erro ao salvar a logo.");
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function handleRemove() {
+  async function handleRemove() {
+    try {
+      if (user?.storeId && token) {
+        await apiUpdateStore(user.storeId, { logoUrl: null }, token);
+      }
+    } catch {
+      toast.error("Erro ao remover a logo.");
+      return;
+    }
     removeLogo();
     setPreview(undefined);
     if (fileRef.current) fileRef.current.value = "";

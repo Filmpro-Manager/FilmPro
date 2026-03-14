@@ -1,6 +1,6 @@
 // ─── Enums / Unions ──────────────────────────────────────────────────────────
 
-export type UserRole = "MASTER_ADMIN" | "COMPANY_ADMIN" | "MANAGER" | "EMPLOYEE";
+export type UserRole = "OWNER" | "MANAGER" | "EMPLOYEE";
 
 export type AppointmentStatus =
   | "draft"

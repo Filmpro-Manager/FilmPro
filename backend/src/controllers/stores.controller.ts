@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import * as storesService from '../services/stores.service';
+import type { JwtPayload } from '../utils/jwt';
 
 export async function getAll(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -35,6 +36,20 @@ export async function create(req: Request, res: Response, next: NextFunction): P
 
 export async function update(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    const reqUser = (req as Request & { user: JwtPayload }).user;
+
+    // OWNER pode editar qualquer loja da sua empresa; outros só a própria loja
+    if (reqUser.role === 'owner') {
+      const store = await storesService.getById(req.params.id as string);
+      if (!store || store.company.id !== reqUser.companyId) {
+        res.status(403).json({ message: 'Sem permissão para editar esta loja' });
+        return;
+      }
+    } else if (reqUser.storeId !== req.params.id) {
+      res.status(403).json({ message: 'Sem permissão para editar esta loja' });
+      return;
+    }
+
     const store = await storesService.update(req.params.id as string, req.body);
     res.json(store);
   } catch (error) {

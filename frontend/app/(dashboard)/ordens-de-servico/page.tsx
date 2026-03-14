@@ -6,6 +6,7 @@ import {
   Calendar, MoreHorizontal, ChevronDown, Trash2, Car, Landmark,
 } from "lucide-react";
 import { useServicesStore } from "@/store/services-store";
+import { useAuthStore } from "@/store/auth-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +72,7 @@ const STATUS_ACTIONS: { label: string; value: AppointmentStatus }[] = [
 
 export default function OrdensDeServicoPage() {
   const { services, updateStatus, deleteService } = useServicesStore();
+  const isEmployee = useAuthStore((s) => s.user?.role === "EMPLOYEE");
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [filterCategory, setFilterCategory] = useState<FilterCategory>("all");
@@ -167,7 +169,9 @@ export default function OrdensDeServicoPage() {
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Finalizados</p>
                 <p className="text-2xl font-bold text-emerald-500">{counts.completed}</p>
-                <p className="text-xs text-muted-foreground">{formatCurrency(completedRevenue)}</p>
+                {!isEmployee && (
+                  <p className="text-xs text-muted-foreground">{formatCurrency(completedRevenue)}</p>
+                )}
               </div>
               <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-0.5" />
             </div>
@@ -247,8 +251,8 @@ export default function OrdensDeServicoPage() {
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide hidden md:table-cell">Veículo</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">Serviço</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide hidden lg:table-cell">Responsável</th>
-                <th className="text-right px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">Valor</th>
-                <th className="text-center px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide hidden sm:table-cell">Pgto</th>
+                {!isEmployee && <th className="text-right px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">Valor</th>}
+                {!isEmployee && <th className="text-center px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide hidden sm:table-cell">Pgto</th>}
                 <th className="text-center px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">Status</th>
                 <th className="px-4 py-3 w-10" />
               </tr>
@@ -256,7 +260,7 @@ export default function OrdensDeServicoPage() {
             <tbody className="divide-y divide-border">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-muted-foreground text-sm">
+                  <td colSpan={isEmployee ? 7 : 9} className="px-4 py-12 text-center text-muted-foreground text-sm">
                     <XCircle className="w-8 h-8 mx-auto mb-2 opacity-30" />
                     Nenhuma ordem encontrada
                   </td>
@@ -312,26 +316,30 @@ export default function OrdensDeServicoPage() {
                     </td>
 
                     {/* Valor */}
-                    <td className="px-4 py-3 text-right font-medium tabular-nums whitespace-nowrap">
-                      {formatCurrency(service.value)}
-                    </td>
+                    {!isEmployee && (
+                      <td className="px-4 py-3 text-right font-medium tabular-nums whitespace-nowrap">
+                        {formatCurrency(service.value)}
+                      </td>
+                    )}
 
                     {/* Pgto */}
-                    <td className="px-4 py-3 text-center hidden sm:table-cell">
-                      {service.paymentMethod ? (
-                        <div className="flex flex-col items-center gap-0.5">
-                          <span className="text-xs">{service.paymentMethod}</span>
-                          <Badge
-                            variant={service.paid ? "success" : "warning"}
-                            className="text-[10px] h-4 px-1.5"
-                          >
-                            {service.paid ? "Pago" : "Pendente"}
-                          </Badge>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </td>
+                    {!isEmployee && (
+                      <td className="px-4 py-3 text-center hidden sm:table-cell">
+                        {service.paymentMethod ? (
+                          <div className="flex flex-col items-center gap-0.5">
+                            <span className="text-xs">{service.paymentMethod}</span>
+                            <Badge
+                              variant={service.paid ? "success" : "warning"}
+                              className="text-[10px] h-4 px-1.5"
+                            >
+                              {service.paid ? "Pago" : "Pendente"}
+                            </Badge>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                    )}
 
                     {/* Status */}
                     <td className="px-4 py-3 text-center">
@@ -381,9 +389,11 @@ export default function OrdensDeServicoPage() {
             <p className="text-xs text-muted-foreground">
               {filtered.length} {filtered.length === 1 ? "ordem" : "ordens"} encontrada{filtered.length !== 1 ? "s" : ""}
             </p>
-            <p className="text-xs font-medium">
-              Total filtrado: {formatCurrency(filtered.reduce((acc, s) => acc + s.value, 0))}
-            </p>
+            {!isEmployee && (
+              <p className="text-xs font-medium">
+                Total filtrado: {formatCurrency(filtered.reduce((acc, s) => acc + s.value, 0))}
+              </p>
+            )}
           </div>
         )}
       </div>

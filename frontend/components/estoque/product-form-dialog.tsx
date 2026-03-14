@@ -7,7 +7,10 @@ import { Loader2 } from "lucide-react";
 import { productSchema, type ProductInput } from "@/lib/validators";
 import { maskCurrency, parseCurrency } from "@/lib/masks";
 import type { Product } from "@/types";
-import { useProductsStore } from "@/store/products-store";
+import { useProductsStore, mapApiItemToProduct } from "@/store/products-store";
+import { apiCreateInventoryItem, apiUpdateInventoryItem } from "@/lib/api";
+import { useAuthStore } from "@/store/auth-store";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -34,6 +37,7 @@ interface ProductFormDialogProps {
 export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDialogProps) {
   const skuManuallyEdited = useRef(false);
   const { addProduct, updateProduct } = useProductsStore();
+  const token = useAuthStore((s) => s.token) ?? "";
 
   // Estado de display para campos com máscara
   const [costDisplay, setCostDisplay] = useState("");
@@ -94,19 +98,31 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
   }, [product, reset]);
 
   async function onSubmit(data: ProductInput) {
-    const now = new Date().toISOString();
-    if (product) {
-      updateProduct({ ...product, ...data, updatedAt: now });
-    } else {
-      addProduct({
-        ...data,
-        id: `p-${Date.now()}`,
-        createdAt: now,
-        updatedAt: now,
-      });
+    try {
+      const payload = {
+        name: data.model,
+        brand: data.brand,
+        type: data.type,
+        transparency: data.transparency,
+        quantity: data.availableMeters,
+        minQuantity: data.minimumStock,
+        costPrice: data.costPrice,
+        pricePerUnit: data.pricePerMeter,
+        sku: data.sku || undefined,
+      };
+
+      if (product) {
+        const updated = await apiUpdateInventoryItem(product.id, payload, token);
+        updateProduct(mapApiItemToProduct(updated));
+      } else {
+        const created = await apiCreateInventoryItem(payload, token);
+        addProduct(mapApiItemToProduct(created));
+      }
+      reset();
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : product ? "Erro ao atualizar película" : "Erro ao criar película");
     }
-    reset();
-    onOpenChange(false);
   }
 
   function handleCurrencyChange(

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Plus, Pencil, Power, PowerOff, Car, Landmark, Trash2 } from "lucide-react";
 import { useServiceCatalogStore } from "@/store/service-catalog-store";
+import { useAuthStore } from "@/store/auth-store";
 import type { ServiceCatalog, ServiceCategory } from "@/types";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
@@ -34,6 +35,7 @@ type CategoryFilter = ServiceCategory | "all";
 
 export default function ServicosPage() {
   const { services, toggleActive, deleteItem } = useServiceCatalogStore();
+  const isEmployee = useAuthStore((s) => s.user?.role === "EMPLOYEE");
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<CategoryFilter>("all");
   const [formOpen, setFormOpen] = useState(false);
@@ -213,7 +215,7 @@ export default function ServicosPage() {
       </div>
 
       {/* Rodapé com total */}
-      {filtered.length > 0 && (
+      {filtered.length > 0 && !isEmployee && (
         <p className="text-xs text-muted-foreground text-right">
           {filtered.length} serviço{filtered.length !== 1 ? "s" : ""} exibido{filtered.length !== 1 ? "s" : ""}
           {" · "}

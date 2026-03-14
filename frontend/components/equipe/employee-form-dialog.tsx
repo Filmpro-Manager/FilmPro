@@ -64,7 +64,7 @@ export function EmployeeFormDialog({
         name: employee.name,
         email: employee.email,
         phone: employee.phone ?? "",
-        role: (employee.userRole === "COMPANY_ADMIN" ? "COMPANY_ADMIN" : "EMPLOYEE") as "COMPANY_ADMIN" | "EMPLOYEE",
+        role: (employee.userRole === "OWNER" ? "OWNER" : employee.userRole === "MANAGER" ? "MANAGER" : "EMPLOYEE") as "OWNER" | "MANAGER" | "EMPLOYEE",
         isActive: employee.active ?? true,
         specialties: employee.specialties ?? [],
       });
@@ -98,7 +98,7 @@ export function EmployeeFormDialog({
         name: data.name,
         email: data.email,
         phone: data.phone ?? "",
-        role: data.role === "COMPANY_ADMIN" ? "Administrador" : "Técnico",
+        role: data.role === "OWNER" ? "Dono" : data.role === "MANAGER" ? "Gerente" : "Técnico",
         userRole: data.role,
         active: data.isActive,
         specialties: data.specialties,
@@ -147,7 +147,8 @@ export function EmployeeFormDialog({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="EMPLOYEE">Técnico</SelectItem>
-                    <SelectItem value="COMPANY_ADMIN">Administrador</SelectItem>
+                    <SelectItem value="MANAGER">Gerente</SelectItem>
+                    <SelectItem value="OWNER">Dono</SelectItem>
                   </SelectContent>
                 </Select>
               )}

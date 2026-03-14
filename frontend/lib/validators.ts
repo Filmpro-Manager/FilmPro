@@ -34,12 +34,25 @@ export const clientSchema = z.object({
 export const productSchema = z.object({
   brand: z.string().min(1, "Marca obrigatória"),
   model: z.string().min(1, "Modelo obrigatório"),
-  type: z.enum(["automotive", "architecture", "security", "decorative", "solar"]),
-  transparency: z.number().min(1, "Transparência mínima 1%").max(100, "Transparência máxima 100%"),
-  availableMeters: z.number().min(0, "Valor não pode ser negativo"),
-  costPrice: z.number().min(0.01, "Custo inválido"),
-  pricePerMeter: z.number().min(0.01, "Preço de venda inválido"),
-  minimumStock: z.number().min(0, "Valor não pode ser negativo"),
+  type: z.enum(["automotive", "architecture", "security", "decorative", "solar"], {
+    errorMap: () => ({ message: "Selecione um tipo" }),
+  }),
+  transparency: z
+    .number({ required_error: "Transparência obrigatória", invalid_type_error: "Transparência obrigatória" })
+    .min(1, "Transparência mínima 1%")
+    .max(100, "Transparência máxima 100%"),
+  availableMeters: z
+    .number({ required_error: "Quantidade obrigatória", invalid_type_error: "Quantidade obrigatória" })
+    .min(0, "Valor não pode ser negativo"),
+  costPrice: z
+    .number({ required_error: "Custo obrigatório", invalid_type_error: "Custo obrigatório" })
+    .min(0.01, "Custo inválido"),
+  pricePerMeter: z
+    .number({ required_error: "Preço de venda obrigatório", invalid_type_error: "Preço de venda obrigatório" })
+    .min(0.01, "Preço de venda inválido"),
+  minimumStock: z
+    .number({ required_error: "Estoque mínimo obrigatório", invalid_type_error: "Estoque mínimo obrigatório" })
+    .min(0, "Valor não pode ser negativo"),
   supplier: z.string().optional(),
   sku: z.string().optional(),
 });
@@ -93,7 +106,7 @@ export const employeeSchema = z.object({
   name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres"),
   email: z.string().email("E-mail inválido"),
   phone: z.string().optional().or(z.literal("")),
-  role: z.enum(["COMPANY_ADMIN", "MANAGER", "EMPLOYEE"]),
+  role: z.enum(["OWNER", "MANAGER", "EMPLOYEE"]),
   isActive: z.boolean(),
   specialties: z.array(z.string()).optional(),
   salary: z.number().min(0, "Salário inválido").optional(),
@@ -104,7 +117,7 @@ export const employeeSchema = z.object({
 export const userSchema = z.object({
   name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres"),
   email: z.string().email("E-mail inválido"),
-  role: z.enum(["MASTER_ADMIN", "COMPANY_ADMIN", "MANAGER", "EMPLOYEE"]),
+  role: z.enum(["OWNER", "MANAGER", "EMPLOYEE"]),
   password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres").optional(),
   isActive: z.boolean(),
   companyId: z.string().optional().or(z.literal("")),
