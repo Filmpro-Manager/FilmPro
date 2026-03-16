@@ -9,6 +9,7 @@ interface LoginResponse {
     role: string;
     companyId: string;
     storeId: string | null;
+    avatarUrl: string | null;
   };
 }
 
@@ -268,6 +269,7 @@ export interface ApiInventoryItem {
   sku: string | null;
   createdAt: string;
   updatedAt: string;
+  createdBy: { id: string; name: string } | null;
 }
 
 export interface ApiInventoryMovement {
@@ -371,5 +373,86 @@ export async function apiCreateMovement(
   const json = await res.json();
   if (!res.ok) throw new Error(json.message ?? 'Erro ao registrar movimentação');
   return json as ApiInventoryMovement;
+}
+
+// ─── Autenticação: Esqueci a Senha ────────────────────────────────────────────
+
+export async function apiForgotPassword(email: string): Promise<{ message: string }> {
+  const res = await fetch(`${BASE_URL}/auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Erro ao solicitar redefinição de senha');
+  return data;
+}
+
+export async function apiVerifyResetCode(code: string): Promise<{ valid: boolean }> {
+  const res = await fetch(`${BASE_URL}/auth/verify-reset-code`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Código inválido ou expirado');
+  return data;
+}
+
+export async function apiResetPassword(token: string, password: string): Promise<{ message: string }> {
+  const res = await fetch(`${BASE_URL}/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, password }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Erro ao redefinir senha');
+  return data;
+}
+
+// ─── Perfil do usuário ────────────────────────────────────────────────────────
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  status: string;
+  avatarUrl: string | null;
+  createdAt: string;
+  company: { id: string; name: string } | null;
+  store: { id: string; name: string } | null;
+}
+
+export interface UpdateProfileData {
+  name?: string;
+  phone?: string;
+  avatarUrl?: string | null;
+  currentPassword?: string;
+  newPassword?: string;
+}
+
+export async function apiGetProfile(token: string): Promise<UserProfile> {
+  const res = await fetch(`${BASE_URL}/users/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Erro ao carregar perfil');
+  return data as UserProfile;
+}
+
+export async function apiUpdateProfile(data: UpdateProfileData, token: string): Promise<UserProfile> {
+  const res = await fetch(`${BASE_URL}/users/me`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Erro ao atualizar perfil');
+  return json as UserProfile;
 }
 

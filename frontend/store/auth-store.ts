@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { User } from "@/types";
-import { apiLogin } from "@/lib/api";
+import { apiLogin, apiUpdateProfile, type UpdateProfileData } from "@/lib/api";
 
 // Helpers para sincronizar o token num cookie (lido pelo middleware)
 function setTokenCookie(token: string) {
@@ -22,6 +22,7 @@ interface AuthStore {
   hasRole: (...roles: string[]) => boolean;
   setActiveStore: (storeId: string) => void;
   setToken: (token: string) => void;
+  updateUserProfile: (data: UpdateProfileData) => Promise<{ success: boolean; error?: string }>;
 }
 
 export const useAuthStore = create<AuthStore>()(
@@ -44,6 +45,7 @@ export const useAuthStore = create<AuthStore>()(
             companyId: user.companyId,
             storeId: user.storeId ?? null,
             createdAt: new Date().toISOString(),
+            avatar: user.avatarUrl ?? undefined,
           };
 
           set({ user: mappedUser, token, isAuthenticated: true });
@@ -69,6 +71,28 @@ export const useAuthStore = create<AuthStore>()(
       setToken: (token) => {
         set({ token });
         setTokenCookie(token);
+      },
+
+      updateUserProfile: async (data) => {
+        const { token, user } = get();
+        if (!token || !user) return { success: false, error: 'Não autenticado' };
+        try {
+          const updated = await apiUpdateProfile(data, token);
+          set((state) => ({
+            user: state.user
+              ? {
+                  ...state.user,
+                  name: updated.name,
+                  phone: updated.phone,
+                  avatar: updated.avatarUrl ?? null,
+                }
+              : null,
+          }));
+          return { success: true };
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Erro ao atualizar perfil';
+          return { success: false, error: message };
+        }
       },
 
       hasRole: (...roles) => {

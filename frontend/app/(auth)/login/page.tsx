@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -203,12 +204,12 @@ export default function LoginPage() {
               <div className="space-y-2 animate-slide-in-right delay-150">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
-                  <button
-                    type="button"
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  <Link
+                    href="/esqueci-a-senha"
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                   >
                     Esqueceu a senha?
-                  </button>
+                  </Link>
                 </div>
                 <div className="relative">
                   <Input

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
@@ -20,7 +19,6 @@ import {
   FileSignature,
   Target,
   BarChart3,
-  LogOut,
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -68,15 +66,10 @@ const navGroups: NavGroup[] = [
       { label: "Metas",      href: "/metas",                 icon: Target,    roles: ["OWNER","MANAGER"] },
       { label: "Relatórios", href: "/relatorios",            icon: BarChart3, roles: ["OWNER"] },
       { label: "Empresa",    href: "/configuracoes/empresa", icon: Building2, roles: ["OWNER"] },
+      { label: "Meu Perfil", href: "/configuracoes/perfil",  icon: Settings },
     ],
   },
 ];
-
-const roleLabel: Record<string, string> = {
-  OWNER:    "Dono",
-  MANAGER:  "Gerente",
-  EMPLOYEE: "Funcionário",
-};
 
 interface SidebarProps {
   collapsed: boolean;
@@ -87,13 +80,11 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: SidebarProps) {
   const pathname      = usePathname();
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const { settings }  = useCompanyStore();
-  const router        = useRouter();
 
   const { logoUrl, modules } = settings;
   const companyName = settings.tradeName || settings.name;
-
   const mods: CompanyModules = {
     hasService:   true,
     hasProducts:  true,
@@ -106,11 +97,6 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
     if (item.roles && user && !item.roles.includes(user.role)) return false;
     if (item.module && !mods[item.module]) return false;
     return true;
-  }
-
-  function handleLogout() {
-    logout();
-    router.push("/login");
   }
 
   return (
@@ -232,56 +218,6 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
           );
         })}
       </nav>
-
-      {/* ── Usuário ───────────────────────────────────────────────── */}
-      {user && (
-        <div className="shrink-0 border-t border-[hsl(222,25%,13%)] px-2 py-2.5">
-          {collapsed ? (
-            <button
-              onClick={handleLogout}
-              title="Sair"
-              className="flex items-center justify-center w-full h-9 rounded-lg text-[hsl(222,15%,40%)] hover:bg-red-500/10 hover:text-red-400 transition-colors"
-            >
-              <LogOut className="w-[15px] h-[15px]" />
-            </button>
-          ) : (
-            <div className="rounded-lg bg-[hsl(222,28%,10%)] border border-[hsl(222,25%,15%)] px-2.5 py-2 animate-fade-in">
-              <div className="flex items-center gap-2 min-w-0">
-                {/* Avatar */}
-                <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/20 text-primary text-[11px] font-bold shrink-0 ring-1 ring-primary/25">
-                  {user.name.charAt(0).toUpperCase()}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="text-[12px] font-medium text-white truncate leading-tight">
-                    {user.name}
-                  </p>
-                  <p className="text-[10px] text-[hsl(222,15%,42%)] truncate leading-tight mt-0.5">
-                    {roleLabel[user.role] ?? user.role}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-0.5 shrink-0">
-                  <button
-                    onClick={() => router.push("/configuracoes/empresa")}
-                    title="Configurações"
-                    className="flex items-center justify-center w-6 h-6 rounded-md text-[hsl(222,15%,38%)] hover:bg-[hsl(222,25%,18%)] hover:text-[hsl(222,15%,65%)] transition-colors"
-                  >
-                    <Settings className="w-3 h-3" />
-                  </button>
-                  <button
-                    onClick={handleLogout}
-                    title="Sair"
-                    className="flex items-center justify-center w-6 h-6 rounded-md text-[hsl(222,15%,38%)] hover:bg-red-500/10 hover:text-red-400 transition-colors"
-                  >
-                    <LogOut className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ── Botão toggle (apenas desktop) ───────────────────────── */}
       <button

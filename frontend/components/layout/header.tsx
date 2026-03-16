@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Bell, LogOut, Settings, Moon, Sun, Menu, Zap, Store } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Bell, LogOut, Settings, Moon, Sun, Menu, Zap, Store, User as UserIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth-store";
+import { apiGetProfile } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { QuickServiceDialog } from "@/components/shared/quick-service-dialog";
 import {
@@ -24,10 +25,24 @@ interface HeaderProps {
 }
 
 export function Header({ onMenuToggle, className }: HeaderProps) {
-  const { user, logout, hasRole } = useAuthStore();
+  const { user, token, logout, hasRole } = useAuthStore();
   const { theme, setTheme } = useTheme();
   const router = useRouter();
   const [quickOpen, setQuickOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatar ?? null);
+
+  // Busca o avatar atualizado da API sempre que o token mudar (login, troca de loja, etc.)
+  useEffect(() => {
+    if (!token) return;
+    apiGetProfile(token)
+      .then((profile) => setAvatarUrl(profile.avatarUrl ?? null))
+      .catch(() => {/* ignora erros silenciosamente */});
+  }, [token]);
+
+  // Sincroniza quando o store for atualizado (inclusive remoção de foto)
+  useEffect(() => {
+    setAvatarUrl(user?.avatar ?? null);
+  }, [user?.avatar, user?.name]);
 
   function handleLogout() {
     logout();
@@ -77,10 +92,15 @@ export function Header({ onMenuToggle, className }: HeaderProps) {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-9 w-9 rounded-full cursor-pointer">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback>{user?.name.charAt(0).toUpperCase() ?? "U"}</AvatarFallback>
-              </Avatar>
+            <Button variant="ghost" className="relative h-9 w-9 rounded-full cursor-pointer p-0 overflow-hidden focus-visible:ring-0 focus-visible:ring-offset-0">
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt={user?.name} className="h-9 w-9 rounded-full object-cover" />
+              ) : (
+                <div className="h-9 w-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-semibold">
+                  {user?.name.charAt(0).toUpperCase() ?? "U"}
+                </div>
+              )}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-52" align="end" forceMount>
@@ -109,6 +129,14 @@ export function Header({ onMenuToggle, className }: HeaderProps) {
                 </DropdownMenuItem>
               </>
             )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => router.push("/configuracoes/perfil")}
+              className="cursor-pointer"
+            >
+              <UserIcon className="mr-2 h-4 w-4" />
+              Meu Perfil
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={handleLogout}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { Plus, AlertTriangle, Trash2 } from "lucide-react";
+import { Plus, AlertTriangle, Trash2, Filter } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,9 @@ import { cn } from "@/lib/utils";
 
 export default function EstoquePage() {
   const [search, setSearch] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [filterLowStock, setFilterLowStock] = useState(false);
+  const [filterMovType, setFilterMovType] = useState("all");
   const [openForm, setOpenForm] = useState(false);
   const [openMovement, setOpenMovement] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
@@ -74,14 +77,22 @@ export default function EstoquePage() {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return products.filter(
-      (p) =>
+    return products.filter((p) => {
+      const matchSearch =
         p.brand.toLowerCase().includes(q) ||
         p.model.toLowerCase().includes(q) ||
         filmTypeLabel(p.type).toLowerCase().includes(q) ||
-        (p.sku ?? "").toLowerCase().includes(q)
-    );
-  }, [search, products]);
+        (p.sku ?? "").toLowerCase().includes(q);
+      const matchType = filterType === "all" || p.type === filterType;
+      const matchLow = !filterLowStock || isLowStock(p.availableMeters, p.minimumStock);
+      return matchSearch && matchType && matchLow;
+    });
+  }, [search, products, filterType, filterLowStock]);
+
+  const filteredMovements = useMemo(() => {
+    if (filterMovType === "all") return movements;
+    return movements.filter((m) => m.type === filterMovType);
+  }, [movements, filterMovType]);
 
   const columns: TableColumn<Product>[] = [
     {
@@ -153,6 +164,16 @@ export default function EstoquePage() {
         );
       },
       className: "text-right hidden md:table-cell",
+    },
+    {
+      key: "createdBy",
+      header: "Cadastrado por",
+      render: (row) => (
+        <span className="text-sm text-muted-foreground">
+          {row.createdBy?.name ?? "—"}
+        </span>
+      ),
+      className: "hidden lg:table-cell",
     },
     {
       key: "id",
@@ -245,24 +266,71 @@ export default function EstoquePage() {
         </TabsList>
 
         <TabsContent value="products" className="space-y-4 mt-4">
-          <div className="flex items-center gap-3">
-            <SearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder="Buscar marca, modelo, SKU..."
-              className="max-w-sm"
-            />
-            <span className="text-xs text-muted-foreground ml-auto">
-              {filtered.length} {filtered.length === 1 ? "produto" : "produtos"}
-            </span>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <SearchInput
+                value={search}
+                onChange={setSearch}
+                placeholder="Buscar marca, modelo, SKU..."
+                className="max-w-sm"
+              />
+              <Button
+                variant={filterLowStock ? "default" : "outline"}
+                size="sm"
+                className="gap-1.5 shrink-0"
+                onClick={() => setFilterLowStock((v) => !v)}
+              >
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Estoque baixo
+              </Button>
+              <span className="text-xs text-muted-foreground ml-auto shrink-0">
+                {filtered.length} {filtered.length === 1 ? "produto" : "produtos"}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(["all", "automotive", "architecture", "security", "decorative", "solar"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setFilterType(t)}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                    filterType === t
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background text-muted-foreground hover:border-foreground hover:text-foreground"
+                  )}
+                >
+                  {t === "all" ? "Todos" : filmTypeLabel(t)}
+                </button>
+              ))}
+            </div>
           </div>
           <DataTable columns={columns} data={filtered} keyField="id" />
         </TabsContent>
 
-        <TabsContent value="movements" className="mt-4">
+        <TabsContent value="movements" className="space-y-4 mt-4">
+          <div className="flex items-center gap-2">
+            <Filter className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            {(["all", "entrada", "saida", "ajuste"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setFilterMovType(t)}
+                className={cn(
+                  "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                  filterMovType === t
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background text-muted-foreground hover:border-foreground hover:text-foreground"
+                )}
+              >
+                {t === "all" ? "Todos" : t === "entrada" ? "Entrada" : t === "saida" ? "Saída" : "Ajuste"}
+              </button>
+            ))}
+            <span className="text-xs text-muted-foreground ml-auto">
+              {filteredMovements.length} {filteredMovements.length === 1 ? "registro" : "registros"}
+            </span>
+          </div>
           <DataTable
             columns={movementColumns}
-            data={movements}
+            data={filteredMovements}
             keyField="id"
             emptyMessage={loadingMovements ? "Carregando..." : "Nenhuma movimentação registrada."}
           />

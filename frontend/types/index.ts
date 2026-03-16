@@ -162,6 +162,7 @@ export interface Product {
   sku?: string;
   createdAt: string;
   updatedAt: string;
+  createdBy?: { id: string; name: string } | null;
 }
 
 export interface StockMovement {

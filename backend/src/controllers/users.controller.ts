@@ -78,3 +78,27 @@ export async function remove(req: Request, res: Response, next: NextFunction): P
     next(error);
   }
 }
+
+export async function getProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = (req as AuthRequest).user;
+    const user = await usersService.getProfile(id);
+    if (!user) {
+      res.status(404).json({ message: 'Usuário não encontrado' });
+      return;
+    }
+    res.json(user);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = (req as AuthRequest).user;
+    const user = await usersService.updateProfile(id, req.body);
+    res.json(user);
+  } catch (error) {
+    next(error);
+  }
+}

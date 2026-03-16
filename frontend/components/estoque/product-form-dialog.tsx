@@ -95,7 +95,7 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
       setMetersDisplay("");
       setMinStockDisplay("");
     }
-  }, [product, reset]);
+  }, [product, reset, open]);
 
   async function onSubmit(data: ProductInput) {
     try {
@@ -119,6 +119,11 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
         addProduct(mapApiItemToProduct(created));
       }
       reset();
+      setCostDisplay("");
+      setPriceDisplay("");
+      setTransparencyDisplay("");
+      setMetersDisplay("");
+      setMinStockDisplay("");
       onOpenChange(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : product ? "Erro ao atualizar película" : "Erro ao criar película");
@@ -273,7 +278,8 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
                 id="sku"
                 placeholder="LLU-ATR15"
                 {...register("sku")}
-                onInput={() => { skuManuallyEdited.current = true; }}
+                readOnly
+                className="bg-muted/50 cursor-not-allowed"
               />
             </FormField>
 

@@ -21,9 +21,9 @@ import { toast } from "sonner";
 
 const schema = z.object({
   inventoryItemId: z.string().min(1, "Selecione uma película"),
-  type: z.enum(["entrada", "saida"]),
+  type: z.enum(["entrada", "saida"], { error: "Selecione o tipo de movimentação" }),
   quantity: z.coerce
-    .number({ invalid_type_error: "Informe uma quantidade válida" })
+    .number({ error: "Informe uma quantidade válida" })
     .positive("A quantidade deve ser maior que zero"),
   reason: z.string().min(1, "O motivo é obrigatório"),
 });
@@ -80,14 +80,9 @@ export function StockMovementDialog({ open, onOpenChange }: StockMovementDialogP
     onOpenChange(open);
   }
 
-  const availableHint =
-    watchedType === "saida" && selectedProduct
-      ? `Disponível: ${selectedProduct.availableMeters.toFixed(2).replace(".", ",")} m`
-      : undefined;
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Registrar Movimentação</DialogTitle>
         </DialogHeader>
@@ -111,8 +106,22 @@ export function StockMovementDialog({ open, onOpenChange }: StockMovementDialogP
             </Select>
           </FormField>
 
+          {selectedProduct && (
+            <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+              <span className="text-muted-foreground">Estoque atual:</span>
+              <span className="font-medium">
+                {selectedProduct.availableMeters.toFixed(2).replace(".", ",")} m
+              </span>
+              {selectedProduct.availableMeters <= selectedProduct.minimumStock && (
+                <span className="ml-auto text-xs font-medium text-amber-600 dark:text-amber-400">
+                  Estoque baixo
+                </span>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
-            <FormField label="Tipo" htmlFor="movType">
+            <FormField label="Tipo" htmlFor="movType" error={errors.type?.message}>
               <Select
                 value={watchedType}
                 onValueChange={(v) => setValue("type", v as "entrada" | "saida", { shouldValidate: true })}
@@ -127,7 +136,7 @@ export function StockMovementDialog({ open, onOpenChange }: StockMovementDialogP
               </Select>
             </FormField>
 
-            <FormField label="Quantidade (m)" htmlFor="quantity" error={errors.quantity?.message} hint={availableHint}>
+            <FormField label="Quantidade (m)" htmlFor="quantity" error={errors.quantity?.message}>
               <Input
                 id="quantity"
                 type="number"

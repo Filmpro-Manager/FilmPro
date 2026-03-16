@@ -34,3 +34,45 @@ export async function selectStore(req: Request, res: Response, next: NextFunctio
     next(error);
   }
 }
+
+export async function forgotPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { email } = req.body as { email?: string };
+    if (!email) {
+      res.status(400).json({ message: 'E-mail é obrigatório' });
+      return;
+    }
+    const result = await authService.forgotPassword(email);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function verifyResetCode(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { code } = req.body as { code?: string };
+    if (!code) {
+      res.status(400).json({ message: 'Código é obrigatório' });
+      return;
+    }
+    const result = await authService.verifyResetCode(code);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { token, password } = req.body as { token?: string; password?: string };
+    if (!token || !password) {
+      res.status(400).json({ message: 'Token e nova senha são obrigatórios' });
+      return;
+    }
+    const result = await authService.resetPassword(token, password);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}

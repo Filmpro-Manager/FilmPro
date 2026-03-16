@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { Prisma } from '@prisma/client';
 import { handlePrismaError } from '../utils/prisma-error';
 
 const itemSelect = {
@@ -15,6 +16,9 @@ const itemSelect = {
   sku: true,
   createdAt: true,
   updatedAt: true,
+  createdBy: {
+    select: { id: true, name: true },
+  },
 } as const;
 
 const movementSelect = {
@@ -103,7 +107,8 @@ export async function createItem(input: CreateItemInput) {
         pricePerUnit: input.pricePerUnit ?? 0,
         transparency: input.transparency ?? 0,
         sku: input.sku,
-      },
+        createdById: input.userId,
+      } satisfies Prisma.InventoryItemUncheckedCreateInput,
       select: itemSelect,
     });
 

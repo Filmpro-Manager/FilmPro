@@ -9,6 +9,7 @@ const userSelect = {
   phone: true,
   role: true,
   status: true,
+  avatarUrl: true,
   createdAt: true,
   company: { select: { id: true, name: true } },
   store: { select: { id: true, name: true } },
@@ -100,6 +101,52 @@ export async function deactivate(id: string) {
 export async function remove(id: string) {
   try {
     return await prisma.user.delete({ where: { id } });
+  } catch (e) {
+    handlePrismaError(e, { entity: 'Usuário' });
+  }
+}
+
+// ─── Perfil do próprio usuário ────────────────────────────────────────────────
+
+export async function getProfile(id: string) {
+  return prisma.user.findUnique({ where: { id }, select: userSelect });
+}
+
+interface UpdateProfileInput {
+  name?: string;
+  phone?: string;
+  avatarUrl?: string | null;
+  currentPassword?: string;
+  newPassword?: string;
+}
+
+export async function updateProfile(id: string, data: UpdateProfileInput) {
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user) {
+    throw Object.assign(new Error('Usuário não encontrado'), { statusCode: 404 });
+  }
+
+  // Se quer trocar senha, valida a atual
+  let passwordHash: string | undefined;
+  if (data.newPassword) {
+    if (!data.currentPassword) {
+      throw Object.assign(new Error('Senha atual é obrigatória para alterar a senha'), { statusCode: 400 });
+    }
+    const valid = await bcrypt.compare(data.currentPassword, user.passwordHash);
+    if (!valid) {
+      throw Object.assign(new Error('Senha atual incorreta'), { statusCode: 400 });
+    }
+    passwordHash = await bcrypt.hash(data.newPassword, 10);
+  }
+
+  const updateData: Record<string, unknown> = {};
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.phone !== undefined) updateData.phone = data.phone;
+  if (data.avatarUrl !== undefined) updateData.avatarUrl = data.avatarUrl;
+  if (passwordHash) updateData.passwordHash = passwordHash;
+
+  try {
+    return await prisma.user.update({ where: { id }, data: updateData, select: userSelect });
   } catch (e) {
     handlePrismaError(e, { entity: 'Usuário' });
   }

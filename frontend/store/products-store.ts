@@ -16,6 +16,7 @@ export function mapApiItemToProduct(item: ApiInventoryItem): Product {
     sku: item.sku ?? undefined,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
+    createdBy: item.createdBy ?? null,
   };
 }
 

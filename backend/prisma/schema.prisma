@@ -79,13 +79,18 @@ model User {
   email        String   @unique
   passwordHash String   @map("password_hash")
   phone        String
+  avatarUrl    String?  @map("avatar_url")
 
   // Roles: owner | manager | employee
   role         String   @default("employee")
   status       String   @default("active")
   createdAt    DateTime @default(now()) @map("created_at")
 
+  passwordResetToken  String?   @map("password_reset_token")
+  passwordResetExpiry DateTime? @map("password_reset_expiry")
+
   inventoryMovements InventoryMovement[]
+  inventoryItemsCreated InventoryItem[] @relation("InventoryCreatedBy")
 
   @@map("users")
 }
@@ -166,6 +171,9 @@ model InventoryItem {
   pricePerUnit Float   @default(0)   @map("price_per_unit")
   transparency Int     @default(0)
   sku         String?
+
+  createdById String?  @map("created_by_id")
+  createdBy   User?    @relation("InventoryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt      @map("updated_at")

@@ -7,6 +7,48 @@ export const loginSchema = z.object({
   password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("E-mail inválido"),
+});
+
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().min(1, "Token obrigatório"),
+    password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
+    confirmPassword: z.string().min(6, "Confirmação obrigatória"),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: "As senhas não coincidem",
+    path: ["confirmPassword"],
+  });
+
+export const updateProfileSchema = z
+  .object({
+    name: z.string().min(2, "Nome deve ter no mínimo 2 caracteres"),
+    phone: z.string().min(10, "Telefone inválido"),
+    currentPassword: z.string().optional(),
+    newPassword: z.string().optional(),
+    confirmNewPassword: z.string().optional(),
+  })
+  .refine(
+    (d) => {
+      if (d.newPassword && !d.currentPassword) return false;
+      return true;
+    },
+    { message: "Informe a senha atual para alterar a senha", path: ["currentPassword"] }
+  )
+  .refine(
+    (d) => {
+      if (d.newPassword && d.newPassword !== d.confirmNewPassword) return false;
+      return true;
+    },
+    { message: "As senhas não coincidem", path: ["confirmNewPassword"] }
+  );
+
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
 export const clientSchema = z.object({
   name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres"),
   phone: z.string().min(10, "Telefone inválido"),
@@ -35,26 +77,34 @@ export const productSchema = z.object({
   brand: z.string().min(1, "Marca obrigatória"),
   model: z.string().min(1, "Modelo obrigatório"),
   type: z.enum(["automotive", "architecture", "security", "decorative", "solar"], {
-    errorMap: () => ({ message: "Selecione um tipo" }),
+    error: "Selecione um tipo",
   }),
   transparency: z
-    .number({ required_error: "Transparência obrigatória", invalid_type_error: "Transparência obrigatória" })
+    .number({ error: "Transparência obrigatória" })
     .min(1, "Transparência mínima 1%")
     .max(100, "Transparência máxima 100%"),
   availableMeters: z
-    .number({ required_error: "Quantidade obrigatória", invalid_type_error: "Quantidade obrigatória" })
+    .number({ error: "Quantidade obrigatória" })
     .min(0, "Valor não pode ser negativo"),
   costPrice: z
-    .number({ required_error: "Custo obrigatório", invalid_type_error: "Custo obrigatório" })
+    .number({ error: "Custo obrigatório" })
     .min(0.01, "Custo inválido"),
   pricePerMeter: z
-    .number({ required_error: "Preço de venda obrigatório", invalid_type_error: "Preço de venda obrigatório" })
+    .number({ error: "Preço de venda obrigatório" })
     .min(0.01, "Preço de venda inválido"),
   minimumStock: z
-    .number({ required_error: "Estoque mínimo obrigatório", invalid_type_error: "Estoque mínimo obrigatório" })
+    .number({ error: "Estoque mínimo obrigatório" })
     .min(0, "Valor não pode ser negativo"),
   supplier: z.string().optional(),
   sku: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.minimumStock > data.availableMeters) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Estoque mínimo não pode ser maior que o estoque atual",
+      path: ["minimumStock"],
+    });
+  }
 });
 
 export const appointmentSchema = z
