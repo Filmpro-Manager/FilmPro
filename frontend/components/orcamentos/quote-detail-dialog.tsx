@@ -30,6 +30,7 @@ import type { Quote, QuoteStatus } from "@/types";
 import { useCompanyStore } from "@/store/company-store";
 import { maskCurrency } from "@/lib/masks";
 import { generateQuotePDF, shareQuoteWhatsApp } from "./quote-pdf";
+import { ConvertToOSDialog } from "./convert-to-os-dialog";
 import { cn } from "@/lib/utils";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -71,7 +72,7 @@ interface QuoteDetailDialogProps {
   onOpenChange: (open: boolean) => void;
   quote: Quote | null;
   onEdit?: (quote: Quote) => void;
-  onConvert?: (quote: Quote) => void;
+  onConvert?: () => void;
   onStatusChange?: (id: string, status: QuoteStatus) => void;
 }
 
@@ -88,6 +89,7 @@ export function QuoteDetailDialog({
 }: QuoteDetailDialogProps) {
   const { settings: company } = useCompanyStore();
   const [confirmSent, setConfirmSent] = useState(false);
+  const [convertOpen, setConvertOpen] = useState(false);
 
   if (!quote) return null;
 
@@ -126,6 +128,7 @@ export function QuoteDetailDialog({
   const SubIcon = isVehicle ? Car : isBuilding ? Landmark : Package;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex flex-col max-w-3xl w-[calc(100%-2rem)] sm:w-full h-[90vh] p-0 gap-0 rounded-2xl overflow-hidden [&>button:last-of-type]:hidden">
 
@@ -170,11 +173,11 @@ export function QuoteDetailDialog({
               </Button>
             )}
 
-            {onConvert && ["draft", "sent"].includes(quote.status) && (
+            {["draft", "sent", "approved"].includes(quote.status) && (
               <Button
                 size="sm"
                 variant="default"
-                onClick={() => { onConvert(quote!); onOpenChange(false); }}
+                onClick={() => setConvertOpen(true)}
               >
                 <ArrowRightCircle className="h-3.5 w-3.5 mr-1.5" /> Converter em OS
               </Button>
@@ -491,6 +494,20 @@ export function QuoteDetailDialog({
 
       </DialogContent>
     </Dialog>
+
+    {/* Dialog de conversão – montado fora do scroll para ficar no topo */}
+    {convertOpen && (
+      <ConvertToOSDialog
+        open={convertOpen}
+        onOpenChange={setConvertOpen}
+        quote={quote}
+        onSuccess={() => {
+          onConvert?.();
+          onOpenChange(false);
+        }}
+      />
+    )}
+    </>
   );
 }
 

@@ -1,25 +1,27 @@
 import { create } from "zustand";
 import type { Quote, QuoteStatus } from "@/types";
-import { mockQuotes } from "@/data/mock";
 
 interface QuotesState {
   quotes: Quote[];
+  setQuotes: (quotes: Quote[]) => void;
   addQuote: (quote: Quote) => void;
-  updateQuote: (id: string, quote: Quote) => void;
+  updateQuote: (quote: Quote) => void;
   updateStatus: (id: string, status: QuoteStatus) => void;
   deleteQuote: (id: string) => void;
   convertToAppointment: (id: string, appointmentId: string) => void;
 }
 
 export const useQuotesStore = create<QuotesState>((set) => ({
-  quotes: [...mockQuotes],
+  quotes: [],
+
+  setQuotes: (quotes) => set({ quotes }),
 
   addQuote: (quote) =>
     set((state) => ({ quotes: [quote, ...state.quotes] })),
 
-  updateQuote: (id, quote) =>
+  updateQuote: (quote) =>
     set((state) => ({
-      quotes: state.quotes.map((q) => (q.id === id ? quote : q)),
+      quotes: state.quotes.map((q) => (q.id === quote.id ? quote : q)),
     })),
 
   updateStatus: (id, status) =>
@@ -36,8 +38,8 @@ export const useQuotesStore = create<QuotesState>((set) => ({
         q.id === id
           ? {
               ...q,
-              status: "approved" as QuoteStatus,
-              convertedAt: new Date().toISOString().slice(0, 10),
+              status: "converted" as QuoteStatus,
+              convertedAt: new Date().toISOString(),
               convertedToAppointmentId: appointmentId,
             }
           : q

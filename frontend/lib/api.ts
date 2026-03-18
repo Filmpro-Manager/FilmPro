@@ -456,3 +456,412 @@ export async function apiUpdateProfile(data: UpdateProfileData, token: string): 
   return json as UserProfile;
 }
 
+// ─── Gestão de usuários (owner) ───────────────────────────────────────────────
+
+export interface CreateUserData {
+  name: string;
+  email: string;
+  phone: string;
+  role: 'manager' | 'employee';
+}
+
+export interface UpdateUserData {
+  name?: string;
+  phone?: string;
+  role?: 'manager' | 'employee';
+}
+
+export async function apiGetUsers(token: string): Promise<UserProfile[]> {
+  const res = await fetch(`${BASE_URL}/users`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Erro ao buscar usuários');
+  return data as UserProfile[];
+}
+
+export async function apiCreateUser(data: CreateUserData, token: string): Promise<UserProfile> {
+  const res = await fetch(`${BASE_URL}/users`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Erro ao criar usuário');
+  return json as UserProfile;
+}
+
+export async function apiUpdateUser(id: string, data: UpdateUserData, token: string): Promise<UserProfile> {
+  const res = await fetch(`${BASE_URL}/users/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Erro ao atualizar usuário');
+  return json as UserProfile;
+}
+
+export async function apiSetUserActive(id: string, active: boolean, token: string): Promise<UserProfile> {
+  const res = await fetch(`${BASE_URL}/users/${id}/${active ? 'activate' : 'deactivate'}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Erro ao atualizar status do usuário');
+  return json as UserProfile;
+}
+
+export async function apiDeleteUser(id: string, token: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/users/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.message ?? 'Erro ao excluir usuário');
+  }
+}
+
+// ─── Service Catalog ─────────────────────────────────────────────────────────
+
+export interface ServiceCatalogDto {
+  id: string;
+  name: string;
+  description?: string;
+  category: string;
+  price: number;
+  estimatedMinutes?: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateServiceData {
+  name: string;
+  description?: string;
+  category: string;
+  price: number;
+  estimatedMinutes?: number;
+  isActive?: boolean;
+}
+
+export interface UpdateServiceData {
+  name?: string;
+  description?: string;
+  category?: string;
+  price?: number;
+  estimatedMinutes?: number;
+  isActive?: boolean;
+}
+
+export async function apiGetServices(token: string, onlyActive = false): Promise<ServiceCatalogDto[]> {
+  const res = await fetch(`${BASE_URL}/services${onlyActive ? '?active=true' : ''}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Erro ao buscar serviços');
+  return data as ServiceCatalogDto[];
+}
+
+export async function apiCreateService(data: CreateServiceData, token: string): Promise<ServiceCatalogDto> {
+  const res = await fetch(`${BASE_URL}/services`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Erro ao criar serviço');
+  return json as ServiceCatalogDto;
+}
+
+export async function apiUpdateService(id: string, data: UpdateServiceData, token: string): Promise<ServiceCatalogDto> {
+  const res = await fetch(`${BASE_URL}/services/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Erro ao atualizar serviço');
+  return json as ServiceCatalogDto;
+}
+
+export async function apiToggleService(id: string, token: string): Promise<ServiceCatalogDto> {
+  const res = await fetch(`${BASE_URL}/services/${id}/toggle`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Erro ao alterar serviço');
+  return json as ServiceCatalogDto;
+}
+
+export async function apiDeleteService(id: string, token: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/services/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.message ?? 'Erro ao excluir serviço');
+  }
+}
+
+// ─── QUOTES (Orçamentos) ──────────────────────────────────────────────────────
+
+export interface ApiQuoteItem {
+  id: string;
+  type: string;
+  name: string;
+  description?: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  discount: number;
+  discountType: string;
+  total: number;
+  productId?: string;
+  serviceId?: string;
+  vehicleId?: string;
+}
+
+export interface ApiQuote {
+  id: string;
+  storeId: string;
+  number: string;
+  status: string;
+  clientId?: string;
+  clientName: string;
+  clientPhone?: string;
+  clientEmail?: string;
+  clientDocument?: string;
+  clientDocumentType?: string;
+  category?: string;
+  subject?: unknown;
+  sellerId?: string;
+  sellerName?: string;
+  createdById?: string;
+  createdByName?: string;
+  subtotal: number;
+  discount: number;
+  discountType?: string;
+  taxes?: number;
+  totalValue: number;
+  acceptedPaymentMethods: string[];
+  payment?: unknown;
+  notes?: string;
+  internalNotes?: string;
+  issueDate: string;
+  validUntil?: string;
+  convertedAt?: string;
+  convertedToAppointmentId?: string;
+  createdAt: string;
+  updatedAt: string;
+  items: ApiQuoteItem[];
+}
+
+export interface CreateQuoteData {
+  clientId?: string;
+  clientName: string;
+  clientPhone?: string;
+  clientEmail?: string;
+  clientDocument?: string;
+  clientDocumentType?: string;
+  category?: string;
+  subject?: unknown;
+  sellerId?: string;
+  sellerName?: string;
+  subtotal: number;
+  discount?: number;
+  discountType?: string;
+  taxes?: number;
+  totalValue: number;
+  acceptedPaymentMethods?: string[];
+  payment?: unknown;
+  notes?: string;
+  internalNotes?: string;
+  issueDate?: string;
+  validUntil?: string;
+  items: Omit<ApiQuoteItem, 'id'>[];
+}
+
+export async function apiGetQuotes(token: string): Promise<ApiQuote[]> {
+  const res = await fetch(`${BASE_URL}/quotes`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error('Erro ao buscar orçamentos');
+  return res.json();
+}
+
+export async function apiCreateQuote(data: CreateQuoteData, token: string): Promise<ApiQuote> {
+  const res = await fetch(`${BASE_URL}/quotes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.message ?? 'Erro ao criar orçamento');
+  }
+  return res.json();
+}
+
+export async function apiUpdateQuote(
+  id: string,
+  data: Partial<CreateQuoteData>,
+  token: string,
+): Promise<ApiQuote> {
+  const res = await fetch(`${BASE_URL}/quotes/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.message ?? 'Erro ao atualizar orçamento');
+  }
+  return res.json();
+}
+
+export async function apiUpdateQuoteStatus(
+  id: string,
+  status: string,
+  token: string,
+): Promise<ApiQuote> {
+  const res = await fetch(`${BASE_URL}/quotes/${id}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.message ?? 'Erro ao atualizar status do orçamento');
+  }
+  return res.json();
+}
+
+export async function apiConvertQuote(
+  id: string,
+  appointmentId: string,
+  token: string,
+): Promise<ApiQuote> {
+  const res = await fetch(`${BASE_URL}/quotes/${id}/convert`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ appointmentId }),
+  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.message ?? 'Erro ao converter orçamento');
+  }
+  return res.json();
+}
+
+export async function apiDeleteQuote(id: string, token: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/quotes/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.message ?? 'Erro ao excluir orçamento');
+  }
+}
+
+// ─── Service Orders (Ordens de Serviço) ──────────────────────────────────────
+
+export interface ApiServiceOrder {
+  id: string;
+  storeId: string;
+  number: string;
+  quoteId: string | null;
+  clientId: string | null;
+  clientName: string;
+  vehicle: string | null;
+  subject: unknown;
+  serviceType: string;
+  employeeId: string | null;
+  employeeName: string | null;
+  date: string;
+  endDate: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  status: string;
+  value: number;
+  items: unknown;
+  notes: string | null;
+  internalNotes: string | null;
+  createdById: string | null;
+  createdByName: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateServiceOrderData {
+  quoteId?: string;
+  clientId?: string;
+  clientName: string;
+  vehicle?: string;
+  subject?: unknown;
+  serviceType?: string;
+  employeeId?: string;
+  employeeName?: string;
+  date: string;
+  endDate?: string;
+  startTime?: string;
+  endTime?: string;
+  value?: number;
+  items?: unknown;
+  notes?: string;
+  internalNotes?: string;
+}
+
+export async function apiGetServiceOrders(token: string): Promise<ApiServiceOrder[]> {
+  const res = await fetch(`${BASE_URL}/service-orders`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Erro ao buscar ordens de serviço');
+  return data as ApiServiceOrder[];
+}
+
+export async function apiCreateServiceOrder(
+  data: CreateServiceOrderData,
+  token: string,
+): Promise<ApiServiceOrder> {
+  const res = await fetch(`${BASE_URL}/service-orders`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Erro ao criar ordem de serviço');
+  return json as ApiServiceOrder;
+}
+
+export async function apiUpdateServiceOrderStatus(
+  id: string,
+  status: string,
+  token: string,
+): Promise<ApiServiceOrder> {
+  const res = await fetch(`${BASE_URL}/service-orders/${id}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ status }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Erro ao atualizar status da OS');
+  return json as ApiServiceOrder;
+}
+
+export async function apiDeleteServiceOrder(id: string, token: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/service-orders/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.message ?? 'Erro ao excluir ordem de serviço');
+  }
+}
+

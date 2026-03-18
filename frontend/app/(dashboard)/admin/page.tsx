@@ -36,8 +36,8 @@ function getInitials(name: string) {
 }
 
 const roleLabel: Record<User["role"], string> = {
-  OWNER: "Dono",
-  MANAGER: "Gerente",
+  OWNER: "Administrador",
+  MANAGER: "Administrador",
   EMPLOYEE: "Técnico",
 };
 
@@ -76,7 +76,7 @@ export default function AdminPage() {
     return (
       <div className="flex flex-col items-center justify-center h-full py-24 gap-4 text-muted-foreground">
         <AlertTriangle className="w-10 h-10 text-destructive" />
-        <p className="text-sm">Acesso restrito ao Dono da empresa.</p>
+        <p className="text-sm">Acesso restrito ao Administrador da empresa.</p>
       </div>
     );
   }
@@ -122,7 +122,7 @@ export default function AdminPage() {
         <div className="flex items-center gap-2">
           <Badge className="gap-1.5 text-xs">
             <ShieldCheck className="w-3 h-3" />
-            Dono
+            Administrador
           </Badge>
           <Button size="sm" className="gap-2" onClick={handleNew}>
             <UserPlus className="w-4 h-4" />
@@ -147,7 +147,7 @@ export default function AdminPage() {
         <Card>
           <CardContent className="pt-4 pb-4">
             <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Crown className="w-3 h-3" /> Donos
+              <Crown className="w-3 h-3" /> Administradores
             </p>
             <p className="text-2xl font-bold mt-1">{counts.owner}</p>
             <p className="text-xs text-muted-foreground">acesso total</p>
@@ -156,7 +156,7 @@ export default function AdminPage() {
         <Card>
           <CardContent className="pt-4 pb-4">
             <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3" /> Gerentes
+              <ShieldCheck className="w-3 h-3" /> Equipe Admin
             </p>
             <p className="text-2xl font-bold mt-1">{counts.manager}</p>
             <p className="text-xs text-muted-foreground">gerem a loja</p>
@@ -194,8 +194,8 @@ export default function AdminPage() {
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList>
               <TabsTrigger value="all">Todos ({counts.all})</TabsTrigger>
-              <TabsTrigger value="owner">Donos ({counts.owner})</TabsTrigger>
-              <TabsTrigger value="manager">Gerentes ({counts.manager})</TabsTrigger>
+              <TabsTrigger value="owner">Proprietários ({counts.owner})</TabsTrigger>
+              <TabsTrigger value="manager">Admin ({counts.manager})</TabsTrigger>
               <TabsTrigger value="employee">
                 Técnicos ({counts.employee})
               </TabsTrigger>

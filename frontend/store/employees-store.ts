@@ -1,16 +1,18 @@
 import { create } from "zustand";
 import type { Employee } from "@/types";
-import { mockEmployees } from "@/data/mock";
 
 interface EmployeesState {
   employees: Employee[];
+  setEmployees: (employees: Employee[]) => void;
   addEmployee: (employee: Employee) => void;
   updateEmployee: (employee: Employee) => void;
   deleteEmployee: (id: string) => void;
 }
 
 export const useEmployeesStore = create<EmployeesState>((set) => ({
-  employees: [...mockEmployees],
+  employees: [],
+
+  setEmployees: (employees) => set({ employees }),
 
   addEmployee: (employee) =>
     set((state) => ({ employees: [employee, ...state.employees] })),

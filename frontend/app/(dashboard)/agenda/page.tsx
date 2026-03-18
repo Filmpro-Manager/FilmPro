@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -9,11 +9,33 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { AppointmentFormDialog } from "@/components/agenda/appointment-form-dialog";
 import { useServicesStore } from "@/store/services-store";
+import { useAuthStore } from "@/store/auth-store";
+import { apiGetServiceOrders, type ApiServiceOrder } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import type { Appointment } from "@/types";
 import { cn } from "@/lib/utils";
 
 const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+function mapApiServiceOrder(api: ApiServiceOrder): Appointment {
+  return {
+    id: api.id,
+    clientId: api.clientId ?? "",
+    clientName: api.clientName,
+    vehicle: api.vehicle ?? "—",
+    serviceType: api.serviceType,
+    employeeId: api.employeeId ?? "",
+    employeeName: api.employeeName ?? "",
+    quoteId: api.quoteId ?? undefined,
+    date: api.date,
+    endDate: api.endDate ?? undefined,
+    startTime: api.startTime ?? undefined,
+    endTime: api.endTime ?? undefined,
+    status: api.status as Appointment["status"],
+    value: api.value,
+    notes: api.notes ?? undefined,
+  };
+}
 
 export default function AgendaPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 1));
@@ -21,6 +43,15 @@ export default function AgendaPage() {
   const [openForm, setOpenForm] = useState(false);
   const [editAppt, setEditAppt] = useState<Appointment | null>(null);
   const appointments = useServicesStore((s) => s.services);
+  const setServices = useServicesStore((s) => s.setServices);
+  const { token } = useAuthStore();
+
+  useEffect(() => {
+    if (!token) return;
+    apiGetServiceOrders(token)
+      .then((data) => setServices(data.map(mapApiServiceOrder)))
+      .catch(() => {});
+  }, [token]);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);

@@ -156,8 +156,7 @@ export const employeeSchema = z.object({
   name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres"),
   email: z.string().email("E-mail inválido"),
   phone: z.string().optional().or(z.literal("")),
-  role: z.enum(["OWNER", "MANAGER", "EMPLOYEE"]),
-  isActive: z.boolean(),
+  role: z.enum(["manager", "employee"]),
   specialties: z.array(z.string()).optional(),
   salary: z.number().min(0, "Salário inválido").optional(),
   commissionPct: z.number().min(0).max(100, "Máximo 100%").optional(), // ex: 20 = 20%

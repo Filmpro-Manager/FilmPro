@@ -1,34 +1,41 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Upload, Download, CheckCircle2, XCircle, AlertTriangle, FileText, X, Loader2 } from "lucide-react";
+import { Upload, Download, CheckCircle2, XCircle, FileText, X, Loader2 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { useClientsStore } from "@/store/clients-store";
+import { useServiceCatalogStore } from "@/store/service-catalog-store";
 import { useAuthStore } from "@/store/auth-store";
-import { apiCreateClient, apiCreateVehicle } from "@/lib/api";
+import { apiCreateService } from "@/lib/api";
 import { toast } from "sonner";
-import type { Client, Vehicle } from "@/types";
+import type { ServiceCatalog, ServiceCategory } from "@/types";
 
-// ─── CSV parser ────────────────────────────────────────────────────────────────
+// ── CSV parser ─────────────────────────────────────────────────────────────────
 
 const HEADERS = [
-  "nome", "telefone", "documento", "tipo_documento", "email",
-  "data_nascimento", "veiculo_marca", "veiculo_modelo", "veiculo_placa",
-  "veiculo_cor", "veiculo_ano", "observacoes",
+  "nome", "categoria", "valor", "descricao", "ativo",
 ] as const;
 
 type CSVRow = Record<typeof HEADERS[number], string>;
+
+const VALID_CATEGORIES: ServiceCategory[] = ["automotive", "architecture"];
+
+// Aceita tanto o valor interno quanto os rótulos em português exportados
+const CATEGORY_NORMALIZE: Record<string, ServiceCategory> = {
+  automotive:   "automotive",
+  architecture: "architecture",
+  automotivo:   "automotive",
+  arquitetura:  "architecture",
+};
 
 interface ParsedRow {
   index: number;
   raw: CSVRow;
   errors: string[];
-  client?: Client;
 }
 
 function parseCSV(text: string): ParsedRow[] {
@@ -40,13 +47,15 @@ function parseCSV(text: string): ParsedRow[] {
 
   if (lines.length < 2) return [];
 
-  // Detecta separador: vírgula ou ponto-e-vírgula
   const sep = lines[0].includes(";") ? ";" : ",";
 
-  // Valida cabeçalho
-  const headLine = lines[0].toLowerCase().split(sep).map((h) => h.trim().replace(/"/g, ""));
-  const headerOk = HEADERS.every((h) => headLine.includes(h));
-  if (!headerOk) return [];
+  const headLine = lines[0]
+    .toLowerCase()
+    .split(sep)
+    .map((h) => h.trim().replace(/^"|"$/g, ""));
+
+  const allPresent = HEADERS.every((h) => headLine.includes(h));
+  if (!allPresent) return [];
 
   const headerIdx = HEADERS.reduce<Record<string, number>>((acc, h) => {
     acc[h] = headLine.indexOf(h);
@@ -54,7 +63,6 @@ function parseCSV(text: string): ParsedRow[] {
   }, {});
 
   return lines.slice(1).map((line, i) => {
-    // Divide respeitando campos entre aspas
     const cells: string[] = [];
     let cur = "";
     let inQuote = false;
@@ -72,70 +80,41 @@ function parseCSV(text: string): ParsedRow[] {
 
     const errors: string[] = [];
 
-    // Validações obrigatórias
     if (!raw.nome) errors.push("Nome obrigatório");
-    if (!raw.telefone) errors.push("Telefone obrigatório");
 
-    // Tipo documento
-    const tipoDoc = raw.tipo_documento.toLowerCase();
-    if (raw.tipo_documento && tipoDoc !== "cpf" && tipoDoc !== "cnpj")
-      errors.push("tipo_documento deve ser 'cpf' ou 'cnpj'");
-
-    // Data
-    if (raw.data_nascimento && !/^\d{4}-\d{2}-\d{2}$/.test(raw.data_nascimento))
-      errors.push("data_nascimento deve ser AAAA-MM-DD");
-
-    // Ano do veículo
-    if (raw.veiculo_ano) {
-      const yr = Number(raw.veiculo_ano);
-      if (isNaN(yr) || yr < 1900 || yr > new Date().getFullYear() + 2)
-        errors.push("veiculo_ano inválido");
+    const cat = raw.categoria.toLowerCase();
+    if (!cat) {
+      errors.push("Categoria obrigatória");
+    } else if (!CATEGORY_NORMALIZE[cat]) {
+      errors.push(`Categoria inválida. Use: automotive, architecture, Automotivo ou Arquitetura`);
     }
 
-    if (errors.length > 0) return { index: i + 2, raw, errors };
-
-    // Monta veículo se tiver placa ou modelo
-    let vehicle: Vehicle | undefined;
-    if (raw.veiculo_marca || raw.veiculo_modelo || raw.veiculo_placa) {
-      vehicle = {
-        id:    crypto.randomUUID(),
-        brand: raw.veiculo_marca || "—",
-        model: raw.veiculo_modelo || "—",
-        plate: raw.veiculo_placa || "—",
-        color: raw.veiculo_cor   || undefined,
-        year:  raw.veiculo_ano   ? Number(raw.veiculo_ano) : undefined,
-      };
+    if (!raw.valor) {
+      errors.push("Valor obrigatório");
+    } else {
+      const priceStr = raw.valor.replace(",", ".");
+      const price = parseFloat(priceStr);
+      if (isNaN(price) || price < 0) errors.push("Valor inválido");
     }
 
-    const client: Client = {
-      id:              crypto.randomUUID(),
-      name:            raw.nome,
-      phone:           raw.telefone,
-      document:        raw.documento   || undefined,
-      documentType:    raw.tipo_documento ? (tipoDoc as "cpf" | "cnpj") : undefined,
-      email:           raw.email        || undefined,
-      birthDate:       raw.data_nascimento || undefined,
-      vehicle,
-      vehicles:        vehicle ? [vehicle] : [],
-      serviceHistory:  [],
-      notes:           raw.observacoes  || undefined,
-      createdAt:       new Date().toISOString().slice(0, 10),
-      totalSpent:      0,
-    };
+    const ativoLower = raw.ativo.toLowerCase();
+    if (raw.ativo && ativoLower !== "sim" && ativoLower !== "não" && ativoLower !== "nao") {
+      errors.push("ativo deve ser 'Sim' ou 'Não'");
+    }
 
-    return { index: i + 2, raw, errors: [], client };
+    return { index: i + 2, raw, errors };
   });
 }
 
-// ─── Dialog ────────────────────────────────────────────────────────────────────
+// ── Dialog ──────────────────────────────────────────────────────────────────────
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function ClientCsvImportDialog({ open, onOpenChange }: Props) {
-  const addClients = useClientsStore((s) => s.addClients);
+export function ServiceCsvImportDialog({ open, onOpenChange }: Props) {
+  const addService = useServiceCatalogStore((s) => s.addService);
   const { token }  = useAuthStore();
 
   const [rows, setRows]           = useState<ParsedRow[]>([]);
@@ -155,13 +134,22 @@ export function ClientCsvImportDialog({ open, onOpenChange }: Props) {
   }
 
   function handleFile(file: File) {
-    if (!file.name.endsWith(".csv")) return;
+    if (!file.name.toLowerCase().endsWith(".csv")) {
+      toast.error("Apenas arquivos .csv são aceitos");
+      return;
+    }
     setFileName(file.name);
     setDone(false);
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
-      setRows(parseCSV(text));
+      const parsed = parseCSV(text);
+      if (parsed.length === 0) {
+        toast.error("O arquivo não contém dados válidos ou o cabeçalho está incorreto");
+        setFileName("");
+        return;
+      }
+      setRows(parsed);
     };
     reader.readAsText(file, "UTF-8");
   }
@@ -182,64 +170,41 @@ export function ClientCsvImportDialog({ open, onOpenChange }: Props) {
   async function handleImport() {
     if (!token) { toast.error("Sessão expirada"); return; }
     setImporting(true);
-    const created: Client[] = [];
     let failed = 0;
 
     for (const row of validRows) {
       try {
-        const api = await apiCreateClient({
-          name:     row.raw.nome,
-          phone:    row.raw.telefone    || undefined,
-          email:    row.raw.email       || undefined,
-          document: row.raw.documento   || undefined,
-          notes:    row.raw.observacoes || undefined,
-        }, token);
-
-        let vehicle: Vehicle | undefined;
-        if (row.raw.veiculo_marca || row.raw.veiculo_modelo || row.raw.veiculo_placa) {
-          const apiV = await apiCreateVehicle(api.id, {
-            brand: row.raw.veiculo_marca  || "—",
-            model: row.raw.veiculo_modelo || "—",
-            plate: row.raw.veiculo_placa  || undefined,
-            color: row.raw.veiculo_cor    || undefined,
-            year:  row.raw.veiculo_ano    ? Number(row.raw.veiculo_ano) : undefined,
-          }, token);
-          vehicle = {
-            id:    apiV.id,
-            brand: apiV.brand,
-            model: apiV.model,
-            plate: apiV.plate ?? "",
-            color: apiV.color ?? undefined,
-            year:  apiV.year  ?? undefined,
-          };
-        }
-
-        const tipoDoc = row.raw.tipo_documento.toLowerCase();
-        created.push({
-          id:           api.id,
-          name:         api.name,
-          phone:        api.phone    ?? "",
-          email:        api.email    ?? undefined,
-          document:     api.document ?? undefined,
-          documentType: tipoDoc === "cpf" || tipoDoc === "cnpj" ? tipoDoc : undefined,
-          birthDate:    row.raw.data_nascimento || undefined,
-          vehicle,
-          vehicles:     vehicle ? [vehicle] : [],
-          notes:        api.notes ?? undefined,
-          serviceHistory: [],
-          createdAt:    api.createdAt,
-          totalSpent:   0,
-        });
+        const priceStr = row.raw.valor.replace(",", ".");
+        const ativoLower = row.raw.ativo.toLowerCase();
+        const api = await apiCreateService(
+          {
+            name:            row.raw.nome,
+            description:     row.raw.descricao  || undefined,
+            category:        CATEGORY_NORMALIZE[row.raw.categoria.toLowerCase()] ?? row.raw.categoria.toLowerCase(),
+            price:           parseFloat(priceStr),
+          },
+          token,
+        );
+        const service: ServiceCatalog = {
+          id:              api.id,
+          name:            api.name,
+          description:     api.description ?? undefined,
+          category:        api.category as ServiceCategory,
+          price:           api.price,
+          estimatedMinutes: api.estimatedMinutes ?? undefined,
+          isActive:        ativoLower !== "não" && ativoLower !== "nao",
+          createdAt:       api.createdAt,
+        };
+        addService(service);
       } catch {
         failed++;
       }
     }
 
-    addClients(created);
     setImporting(false);
     setDone(true);
     if (failed > 0) {
-      toast.warning(`${failed} cliente${failed !== 1 ? "s" : ""} não puderam ser importados`);
+      toast.warning(`${failed} serviço${failed !== 1 ? "s" : ""} não pud${failed !== 1 ? "eram" : "e"} ser importado${failed !== 1 ? "s" : ""}`);
     }
   }
 
@@ -253,11 +218,11 @@ export function ClientCsvImportDialog({ open, onOpenChange }: Props) {
       <DialogContent className="flex flex-col max-w-3xl h-[90vh] w-[calc(100%-2rem)] sm:w-full p-0 gap-0 overflow-hidden" hideCloseButton>
         {/* Header */}
         <DialogHeader className="flex-row items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <DialogTitle className="text-base font-semibold">Importar Clientes via CSV</DialogTitle>
+          <DialogTitle className="text-base font-semibold">Importar Serviços via CSV</DialogTitle>
           <div className="flex items-center gap-2">
             <a
-              href="/modelo-clientes.csv"
-              download="modelo-clientes.csv"
+              href="/modelo-servicos.csv"
+              download="modelo-servicos.csv"
               className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               <Download className="w-3.5 h-3.5" />
@@ -319,7 +284,7 @@ export function ClientCsvImportDialog({ open, onOpenChange }: Props) {
             </div>
           )}
 
-          {/* Instrucoes quando nao tem arquivo */}
+          {/* Instruções quando não tem arquivo */}
           {!fileName && (
             <div className="rounded-lg bg-muted/40 p-4 space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Colunas esperadas no CSV</p>
@@ -331,17 +296,18 @@ export function ClientCsvImportDialog({ open, onOpenChange }: Props) {
                 ))}
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Campos obrigatórios: <span className="font-medium text-foreground">nome</span>, <span className="font-medium text-foreground">telefone</span>. Demais são opcionais.
+                Campos obrigatórios: <span className="font-medium text-foreground">nome</span>, <span className="font-medium text-foreground">categoria</span>, <span className="font-medium text-foreground">valor</span>.
+                {" "}Categoria aceita: <span className="font-mono text-foreground">automotive</span> ou <span className="font-mono text-foreground">architecture</span>.
               </p>
             </div>
           )}
 
-          {/* Resultado: sucesso total */}
+          {/* Resultado: sucesso */}
           {done && (
             <div className="flex flex-col items-center gap-3 py-8 text-center">
               <CheckCircle2 className="w-12 h-12 text-emerald-500" />
               <p className="text-base font-semibold text-foreground">
-                {validRows.length} cliente{validRows.length !== 1 ? "s" : ""} importado{validRows.length !== 1 ? "s" : ""} com sucesso!
+                {validRows.length} serviço{validRows.length !== 1 ? "s" : ""} importado{validRows.length !== 1 ? "s" : ""} com sucesso!
               </p>
               {invalidRows.length > 0 && (
                 <p className="text-sm text-muted-foreground">
@@ -352,7 +318,7 @@ export function ClientCsvImportDialog({ open, onOpenChange }: Props) {
             </div>
           )}
 
-          {/* Resumo de validação */}
+          {/* Resumo de validação + preview */}
           {rows.length > 0 && !done && (
             <>
               <div className="flex items-center gap-3">
@@ -377,9 +343,8 @@ export function ClientCsvImportDialog({ open, onOpenChange }: Props) {
                     <tr className="border-b border-border bg-muted/40">
                       <th className="px-3 py-2 text-left font-medium text-muted-foreground w-8">#</th>
                       <th className="px-3 py-2 text-left font-medium text-muted-foreground">Nome</th>
-                      <th className="px-3 py-2 text-left font-medium text-muted-foreground">Telefone</th>
-                      <th className="px-3 py-2 text-left font-medium text-muted-foreground">Documento</th>
-                      <th className="px-3 py-2 text-left font-medium text-muted-foreground">Veículo</th>
+                      <th className="px-3 py-2 text-left font-medium text-muted-foreground">Categoria</th>
+                      <th className="px-3 py-2 text-right font-medium text-muted-foreground">Valor</th>
                       <th className="px-3 py-2 text-left font-medium text-muted-foreground">Status</th>
                     </tr>
                   </thead>
@@ -395,28 +360,29 @@ export function ClientCsvImportDialog({ open, onOpenChange }: Props) {
                           )}
                         >
                           <td className="px-3 py-2 text-muted-foreground">{row.index}</td>
-                          <td className="px-3 py-2 font-medium text-foreground">{row.raw.nome || <span className="text-destructive">—</span>}</td>
-                          <td className="px-3 py-2 text-muted-foreground">{row.raw.telefone || "—"}</td>
-                          <td className="px-3 py-2 text-muted-foreground">
-                            {row.raw.documento
-                              ? <span>{row.raw.documento} <span className="uppercase text-[10px]">({row.raw.tipo_documento})</span></span>
-                              : "—"
-                            }
+                          <td className="px-3 py-2 font-medium">
+                            {row.raw.nome || <span className="text-destructive">—</span>}
                           </td>
                           <td className="px-3 py-2 text-muted-foreground">
-                            {row.raw.veiculo_marca
-                              ? `${row.raw.veiculo_marca} ${row.raw.veiculo_modelo} ${row.raw.veiculo_placa ? `· ${row.raw.veiculo_placa}` : ""}`.trim()
-                              : "—"
-                            }
+                            {row.raw.categoria || <span className="text-destructive">—</span>}
+                          </td>
+                          <td className="px-3 py-2 text-right text-muted-foreground">
+                            {row.raw.valor || "—"}
                           </td>
                           <td className="px-3 py-2">
                             {ok ? (
-                              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                              <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                                <CheckCircle2 className="w-3 h-3" /> OK
+                              </span>
                             ) : (
-                              <div className="flex items-start gap-1">
-                                <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-                                <span className="text-destructive leading-tight">{row.errors.join("; ")}</span>
-                              </div>
+                              <span
+                                className="inline-flex items-center gap-1 text-destructive cursor-help"
+                                title={row.errors.join(" · ")}
+                              >
+                                <XCircle className="w-3 h-3" />
+                                {row.errors[0]}
+                                {row.errors.length > 1 && ` (+${row.errors.length - 1})`}
+                              </span>
                             )}
                           </td>
                         </tr>
@@ -431,21 +397,19 @@ export function ClientCsvImportDialog({ open, onOpenChange }: Props) {
 
         {/* Footer */}
         {rows.length > 0 && !done && (
-          <div className="shrink-0 border-t border-border px-6 py-4 flex items-center justify-between gap-3 bg-card">
+          <div className="flex items-center justify-between px-6 py-4 border-t border-border shrink-0 bg-background">
             <p className="text-xs text-muted-foreground">
-              {invalidRows.length > 0 && `${invalidRows.length} linha${invalidRows.length !== 1 ? "s" : ""} com erro serão ignoradas.`}
+              {invalidRows.length > 0 && "Linhas com erro serão ignoradas."}
             </p>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={handleClose}>Cancelar</Button>
               <Button
                 size="sm"
-                disabled={validRows.length === 0 || importing}
                 onClick={handleImport}
+                disabled={importing || validRows.length === 0}
               >
-                {importing
-                  ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Importando...</>
-                  : `Importar ${validRows.length} cliente${validRows.length !== 1 ? "s" : ""}`
-                }
+                {importing && <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />}
+                Importar {validRows.length > 0 ? `${validRows.length} serviço${validRows.length !== 1 ? "s" : ""}` : ""}
               </Button>
             </div>
           </div>

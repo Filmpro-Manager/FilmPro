@@ -5,6 +5,7 @@ const EXPIRES_IN = (process.env.JWT_EXPIRES_IN || '7d') as SignOptions['expiresI
 
 export interface JwtPayload {
   id: string;
+  name: string;
   email: string;
   role: string;
   companyId: string | null;

@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
-import { useMemo, useState } from "react";
-import { Plus, Pencil, Power, PowerOff, Car, Landmark, Trash2 } from "lucide-react";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { Plus, Pencil, Power, PowerOff, Car, Landmark, Trash2, Download, Upload, Square, CheckSquare } from "lucide-react";
 import { useServiceCatalogStore } from "@/store/service-catalog-store";
 import { useAuthStore } from "@/store/auth-store";
 import type { ServiceCatalog, ServiceCategory } from "@/types";
@@ -10,10 +10,14 @@ import { SearchInput } from "@/components/shared/search-input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ServiceFormDialog } from "@/components/servicos/service-form-dialog";
+import { ServiceCsvImportDialog } from "@/components/servicos/service-csv-import-dialog";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
+import { apiGetServices, apiToggleService, apiDeleteService } from "@/lib/api";
+import { toast } from "sonner";
+import { usePathname } from "next/navigation";
 
 const CATEGORY_LABEL: Record<ServiceCategory | "all", string> = {
   all:          "Todos",
@@ -34,13 +38,39 @@ const CATEGORY_COLOR: Record<ServiceCategory, string> = {
 type CategoryFilter = ServiceCategory | "all";
 
 export default function ServicosPage() {
-  const { services, toggleActive, deleteItem } = useServiceCatalogStore();
-  const isEmployee = useAuthStore((s) => s.user?.role === "EMPLOYEE");
+  const { services, setServices, updateService, deleteItem } = useServiceCatalogStore();
+  const { token } = useAuthStore();
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<CategoryFilter>("all");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ServiceCatalog | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [openImport, setOpenImport] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const pathname = usePathname();
+  const pathnameRef = useRef(pathname);
+
+  useEffect(() => {
+    if (pathnameRef.current !== pathname) exitSelectMode();
+    pathnameRef.current = pathname;
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!token) return;
+    apiGetServices(token)
+      .then((data) =>
+        setServices(
+          data.map((s) => ({
+            ...s,
+            category: s.category as ServiceCategory,
+            description: s.description ?? undefined,
+            estimatedMinutes: s.estimatedMinutes ?? undefined,
+          }))
+        )
+      )
+      .catch(() => toast.error("Erro ao carregar serviços"));
+  }, [token]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -51,12 +81,70 @@ export default function ServicosPage() {
     });
   }, [services, search, tab]);
 
-  // contagens por categoria
   const counts = useMemo(() => ({
-    all:         services.length,
-    automotive:  services.filter((s) => s.category === "automotive").length,
+    all:          services.length,
+    automotive:   services.filter((s) => s.category === "automotive").length,
     architecture: services.filter((s) => s.category === "architecture").length,
   }), [services]);
+
+  const allFilteredSelected = filtered.length > 0 && filtered.every((s) => selectedIds.has(s.id));
+
+  function enterSelectMode() {
+    setSelectMode(true);
+    setSelectedIds(new Set());
+  }
+
+  function exitSelectMode() {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    if (allFilteredSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((s) => s.id)));
+    }
+  }
+
+  function exportCSV() {
+    const toExport = services.filter((s) => selectedIds.has(s.id));
+    const sep = ";";
+    const header = ["nome", "categoria", "valor", "descricao", "ativo"].join(sep);
+    const rows = toExport.map((s) =>
+      [
+        s.name,
+        CATEGORY_LABEL[s.category],
+        s.price.toFixed(2).replace(".", ","),
+        s.description ?? "",
+        s.isActive ? "Sim" : "Não",
+      ]
+        .map((val) => `"${String(val).replace(/"/g, '""')}"`)
+        .join(sep)
+    );
+    const csv = "\uFEFF" + [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `servicos-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(
+      `${toExport.length} ${toExport.length === 1 ? "serviço exportado" : "serviços exportados"}`
+    );
+    exitSelectMode();
+  }
 
   function openNew() {
     setEditing(null);
@@ -68,14 +156,43 @@ export default function ServicosPage() {
     setFormOpen(true);
   }
 
+  async function handleToggleActive(s: ServiceCatalog) {
+    if (!token) return;
+    try {
+      const updated = await apiToggleService(s.id, token);
+      updateService({ ...s, isActive: updated.isActive });
+    } catch {
+      toast.error("Erro ao alterar status do serviço");
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget || !token) return;
+    try {
+      await apiDeleteService(deleteTarget.id, token);
+      deleteItem(deleteTarget.id);
+      setSelectedIds((prev) => { const n = new Set(prev); n.delete(deleteTarget.id); return n; });
+    } catch {
+      toast.error("Erro ao excluir serviço");
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Serviços"
         description="Gerencie os serviços oferecidos e seus valores padrão"
       >
-        <Button onClick={openNew} size="sm">
-          <Plus className="w-4 h-4 mr-1.5" />
+        <Button size="sm" variant="outline" disabled={selectMode} onClick={() => setOpenImport(true)}>
+          <Upload className="h-4 w-4" />
+          Importar CSV
+        </Button>
+        <Button size="sm" variant="outline" onClick={enterSelectMode} disabled={selectMode}>
+          <Download className="h-4 w-4" />
+          Exportar CSV
+        </Button>
+        <Button onClick={openNew} size="sm" disabled={selectMode}>
+          <Plus className="w-4 h-4" />
           Novo Serviço
         </Button>
       </PageHeader>
@@ -89,7 +206,21 @@ export default function ServicosPage() {
           className="flex-1"
         />
 
-        <div className="flex gap-1 flex-wrap">
+        <div className="flex gap-1 flex-wrap items-center">
+          {selectMode && (
+            <button
+              type="button"
+              onClick={toggleAll}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 mr-2"
+            >
+              {allFilteredSelected
+                ? <CheckSquare className="w-4 h-4 text-primary" />
+                : <Square className="w-4 h-4" />
+              }
+              {allFilteredSelected ? "Desmarcar todos" : "Selecionar todos"}
+            </button>
+          )}
+
           {(["all", "automotive", "architecture"] as CategoryFilter[]).map((cat) => (
             <button
               key={cat}
@@ -101,7 +232,7 @@ export default function ServicosPage() {
               }`}
             >
               {CATEGORY_LABEL[cat]}
-              <span className="ml-1.5 opacity-60">{counts[cat]}</span>
+                      <span className="ml-1.5 opacity-60">{counts[cat]}</span>
             </button>
           ))}
         </div>
@@ -112,6 +243,7 @@ export default function ServicosPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/40">
+              {selectMode && <th className="px-4 py-3 w-8" />}
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Serviço</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden sm:table-cell">Categoria</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Descrição</th>
@@ -123,22 +255,38 @@ export default function ServicosPage() {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-10 text-muted-foreground text-sm">
+                <td colSpan={selectMode ? 8 : 7} className="text-center py-10 text-muted-foreground text-sm">
                   Nenhum serviço encontrado.
                 </td>
               </tr>
             ) : (
               filtered.map((s) => {
                 const Icon = CATEGORY_ICON[s.category];
+                const isSelected = selectedIds.has(s.id);
                 return (
                   <tr
                     key={s.id}
-                    className={`border-b border-border last:border-0 transition-colors hover:bg-muted/30 ${!s.isActive ? "opacity-50" : ""}`}
+                    onClick={() => selectMode && toggleSelect(s.id)}
+                    className={`border-b border-border last:border-0 transition-colors hover:bg-muted/30 ${selectMode ? "cursor-pointer" : ""} ${!s.isActive ? "opacity-60" : ""} ${isSelected ? "bg-primary/5 border-primary/20" : ""}`}
                   >
+                    {/* Checkbox — visivel apenas em selectMode */}
+                    {selectMode && (
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <div
+                          className="flex items-center justify-center w-6 h-6 cursor-pointer"
+                          onClick={() => toggleSelect(s.id)}
+                        >
+                          {isSelected
+                            ? <CheckSquare className="w-4 h-4 text-primary" />
+                            : <Square className="w-4 h-4 text-muted-foreground" />
+                          }
+                        </div>
+                      </td>
+                    )}
+
                     {/* Nome */}
                     <td className="px-4 py-3">
                       <p className="font-medium">{s.name}</p>
-                      {/* Categoria mobile */}
                       <p className="text-xs text-muted-foreground sm:hidden mt-0.5">
                         {CATEGORY_LABEL[s.category]}
                       </p>
@@ -173,38 +321,40 @@ export default function ServicosPage() {
 
                     {/* Ações */}
                     <td className="px-4 py-3 text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <span className="sr-only">Ações</span>
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                              <circle cx="10" cy="4"  r="1.5" />
-                              <circle cx="10" cy="10" r="1.5" />
-                              <circle cx="10" cy="16" r="1.5" />
-                            </svg>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEdit(s)}>
-                            <Pencil className="w-3.5 h-3.5 mr-2" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => toggleActive(s.id)}>
-                            {s.isActive
-                              ? <><PowerOff className="w-3.5 h-3.5 mr-2" />Desativar</>
-                              : <><Power className="w-3.5 h-3.5 mr-2" />Ativar</>
-                            }
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => setDeleteTarget({ id: s.id, name: s.name })}
-                            className="text-sm cursor-pointer text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="w-3.5 h-3.5 mr-2" />
-                            Excluir serviço
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {!selectMode && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <span className="sr-only">Ações</span>
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <circle cx="10" cy="4"  r="1.5" />
+                                <circle cx="10" cy="10" r="1.5" />
+                                <circle cx="10" cy="16" r="1.5" />
+                              </svg>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEdit(s)}>
+                              <Pencil className="w-3.5 h-3.5 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleToggleActive(s)}>
+                              {s.isActive
+                                ? <><PowerOff className="w-3.5 h-3.5 mr-2" />Desativar</>
+                                : <><Power className="w-3.5 h-3.5 mr-2" />Ativar</>
+                              }
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => setDeleteTarget({ id: s.id, name: s.name })}
+                              className="text-sm cursor-pointer text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 mr-2" />
+                              Excluir serviço
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </td>
                   </tr>
                 );
@@ -214,19 +364,21 @@ export default function ServicosPage() {
         </table>
       </div>
 
-      {/* Rodapé com total */}
-      {filtered.length > 0 && !isEmployee && (
-        <p className="text-xs text-muted-foreground text-right">
-          {filtered.length} serviço{filtered.length !== 1 ? "s" : ""} exibido{filtered.length !== 1 ? "s" : ""}
-          {" · "}
-          Valor médio:{" "}
-          {(filtered.reduce((acc, s) => acc + s.price, 0) / filtered.length).toLocaleString("pt-BR", {
-            style: "currency",
-            currency: "BRL",
-          })}
-        </p>
+      {/* Rodapé */}
+      {filtered.length > 0 && !selectMode && (
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>{filtered.length} serviço{filtered.length !== 1 ? "s" : ""} exibido{filtered.length !== 1 ? "s" : ""}</span>
+          <span>
+            Valor medio:{" "}
+            {(filtered.reduce((acc, s) => acc + s.price, 0) / filtered.length).toLocaleString("pt-BR", {
+              style: "currency",
+              currency: "BRL",
+            })}
+          </span>
+        </div>
       )}
 
+      <ServiceCsvImportDialog open={openImport} onOpenChange={setOpenImport} />
       <ServiceFormDialog
         open={formOpen}
         onOpenChange={setFormOpen}
@@ -237,8 +389,27 @@ export default function ServicosPage() {
         onOpenChange={(open) => !open && setDeleteTarget(null)}
         itemName={deleteTarget?.name ?? ""}
         itemType="serviço"
-        onConfirm={() => { if (deleteTarget) deleteItem(deleteTarget.id); }}
+        onConfirm={handleDelete}
       />
+
+      {/* Barra de seleção (aparece apenas em modo exportação) */}
+      {selectMode && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl border border-border bg-card shadow-xl shadow-black/20 backdrop-blur-sm animate-in slide-in-from-bottom-4 duration-200">
+          <span className="text-sm text-muted-foreground whitespace-nowrap">
+            {selectedIds.size === 0
+              ? "Selecione os serviços"
+              : `${selectedIds.size} ${selectedIds.size === 1 ? "serviço selecionado" : "serviços selecionados"}`
+            }
+          </span>
+          <Button size="sm" onClick={exportCSV} disabled={selectedIds.size === 0}>
+            <Download className="h-4 w-4" />
+            Exportar
+          </Button>
+          <Button size="sm" variant="outline" onClick={exitSelectMode}>
+            Cancelar
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

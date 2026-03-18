@@ -160,8 +160,8 @@ export function UserFormDialog({
                     <SelectValue placeholder="Selecione o perfil" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="OWNER">Dono</SelectItem>
-                    <SelectItem value="MANAGER">Gerente</SelectItem>
+                    <SelectItem value="OWNER">Proprietário</SelectItem>
+                    <SelectItem value="MANAGER">Administrador</SelectItem>
                     <SelectItem value="EMPLOYEE">Técnico</SelectItem>
                   </SelectContent>
                 </Select>

@@ -6,8 +6,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { serviceCatalogSchema, type ServiceCatalogInput } from "@/lib/validators";
 import { maskCurrency, parseCurrency } from "@/lib/masks";
-import type { ServiceCatalog } from "@/types";
+import type { ServiceCatalog, ServiceCategory } from "@/types";
 import { useServiceCatalogStore } from "@/store/service-catalog-store";
+import { useAuthStore } from "@/store/auth-store";
+import { apiCreateService, apiUpdateService } from "@/lib/api";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,17 +44,16 @@ export function ServiceFormDialog({ open, onOpenChange, service }: ServiceFormDi
     control,
     setValue,
     reset,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<ServiceCatalogInput>({
     resolver: zodResolver(serviceCatalogSchema),
     defaultValues: { isActive: true },
   });
 
-  const addService  = useServiceCatalogStore((s) => s.addService);
+  const addService = useServiceCatalogStore((s) => s.addService);
   const updateService = useServiceCatalogStore((s) => s.updateService);
+  const { token } = useAuthStore();
 
-  // Preenche o form ao editar
   useEffect(() => {
     if (open && service) {
       reset({
@@ -86,21 +87,48 @@ export function ServiceFormDialog({ open, onOpenChange, service }: ServiceFormDi
   }
 
   async function onSubmit(data: ServiceCatalogInput) {
-    await new Promise((r) => setTimeout(r, 400));
-
-    if (service) {
-      updateService({ ...service, ...data });
-      toast.success("Serviço atualizado!", { description: data.name });
-    } else {
-      addService({
-        id: crypto.randomUUID(),
-        ...data,
-        createdAt: new Date().toISOString(),
-      });
-      toast.success("Serviço cadastrado!", { description: data.name });
+    if (!token) {
+      toast.error("Sessão expirada. Faça login novamente.");
+      return;
     }
 
-    handleOpenChange(false);
+    try {
+      if (service) {
+        const updated = await apiUpdateService(service.id, {
+          name: data.name,
+          description: data.description,
+          category: data.category,
+          price: data.price,
+          isActive: data.isActive,
+        }, token);
+        updateService({
+          ...service,
+          ...updated,
+          category: updated.category as ServiceCategory,
+          description: updated.description ?? undefined,
+          estimatedMinutes: updated.estimatedMinutes ?? undefined,
+        });
+        toast.success("Serviço atualizado!", { description: data.name });
+      } else {
+        const created = await apiCreateService({
+          name: data.name,
+          description: data.description,
+          category: data.category,
+          price: data.price,
+          isActive: data.isActive,
+        }, token);
+        addService({
+          ...created,
+          category: created.category as ServiceCategory,
+          description: created.description ?? undefined,
+          estimatedMinutes: created.estimatedMinutes ?? undefined,
+        });
+        toast.success("Serviço cadastrado!", { description: data.name });
+      }
+      handleOpenChange(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao salvar serviço");
+    }
   }
 
   return (
@@ -112,7 +140,6 @@ export function ServiceFormDialog({ open, onOpenChange, service }: ServiceFormDi
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
 
-          {/* Nome */}
           <FormField label="Nome do serviço" htmlFor="name" error={errors.name?.message}>
             <Input
               id="name"
@@ -121,7 +148,6 @@ export function ServiceFormDialog({ open, onOpenChange, service }: ServiceFormDi
             />
           </FormField>
 
-          {/* Categoria */}
           <FormField label="Categoria" htmlFor="category" error={errors.category?.message}>
             <Controller
               name="category"
@@ -140,7 +166,6 @@ export function ServiceFormDialog({ open, onOpenChange, service }: ServiceFormDi
             />
           </FormField>
 
-          {/* Preço */}
           <FormField label="Valor padrão (R$)" htmlFor="price" error={errors.price?.message}>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
@@ -157,7 +182,6 @@ export function ServiceFormDialog({ open, onOpenChange, service }: ServiceFormDi
             </div>
           </FormField>
 
-          {/* Descrição */}
           <FormField label="Descrição" htmlFor="description">
             <Textarea
               id="description"
@@ -167,7 +191,6 @@ export function ServiceFormDialog({ open, onOpenChange, service }: ServiceFormDi
             />
           </FormField>
 
-          {/* Ativo */}
           <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2.5">
             <Label htmlFor="isActive" className="flex-1 text-sm cursor-pointer select-none">
               Serviço ativo (aparece nas seleções)

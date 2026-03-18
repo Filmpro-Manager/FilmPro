@@ -324,6 +324,9 @@ export interface Quote {
   // vendedor
   sellerId?: string;
   sellerName?: string;
+  // criado por
+  createdById?: string;
+  createdByName?: string;
   // itens & totais
   items: QuoteItem[];
   subtotal: number;           // soma dos itens antes do desconto global

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search, Zap, ClipboardList, CheckCircle2, Clock, XCircle,
   Calendar, MoreHorizontal, ChevronDown, Trash2, Car, Landmark,
@@ -19,11 +19,32 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { QuickServiceDialog } from "@/components/shared/quick-service-dialog";
 import { AppointmentFormDialog } from "@/components/agenda/appointment-form-dialog";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
+import { apiGetServiceOrders, apiUpdateServiceOrderStatus, apiDeleteServiceOrder, type ApiServiceOrder } from "@/lib/api";
 import { formatCurrency, formatDate, appointmentStatusLabel } from "@/lib/utils";
 import type { Appointment, AppointmentStatus, ServiceCategory } from "@/types";
 
 type FilterStatus = "all" | AppointmentStatus;
 type FilterCategory = "all" | ServiceCategory;
+
+function mapApiServiceOrder(api: ApiServiceOrder): Appointment {
+  return {
+    id: api.id,
+    clientId: api.clientId ?? "",
+    clientName: api.clientName,
+    vehicle: api.vehicle ?? "—",
+    serviceType: api.serviceType,
+    employeeId: api.employeeId ?? "",
+    employeeName: api.employeeName ?? "",
+    quoteId: api.quoteId ?? undefined,
+    date: api.date,
+    endDate: api.endDate ?? undefined,
+    startTime: api.startTime ?? undefined,
+    endTime: api.endTime ?? undefined,
+    status: api.status as Appointment["status"],
+    value: api.value,
+    notes: api.notes ?? undefined,
+  };
+}
 
 // Deriva categoria quando não está explícita no registro
 function categoryOf(s: Appointment): ServiceCategory {
@@ -71,8 +92,16 @@ const STATUS_ACTIONS: { label: string; value: AppointmentStatus }[] = [
 ];
 
 export default function OrdensDeServicoPage() {
-  const { services, updateStatus, deleteService } = useServicesStore();
+  const { services, updateStatus, deleteService, setServices } = useServicesStore();
   const isEmployee = useAuthStore((s) => s.user?.role === "EMPLOYEE");
+  const { token } = useAuthStore();
+
+  useEffect(() => {
+    if (!token) return;
+    apiGetServiceOrders(token)
+      .then((data) => setServices(data.map(mapApiServiceOrder)))
+      .catch(() => {});
+  }, [token]);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [filterCategory, setFilterCategory] = useState<FilterCategory>("all");
@@ -360,7 +389,10 @@ export default function OrdensDeServicoPage() {
                           {STATUS_ACTIONS.filter((a) => a.value !== service.status).map((action) => (
                             <DropdownMenuItem
                               key={action.value}
-                              onClick={() => updateStatus(service.id, action.value)}
+                              onClick={() => {
+                                updateStatus(service.id, action.value);
+                                if (token) apiUpdateServiceOrderStatus(service.id, action.value, token).catch(() => {});
+                              }}
                               className="text-sm cursor-pointer"
                             >
                               {action.label}
@@ -412,7 +444,7 @@ export default function OrdensDeServicoPage() {
         onOpenChange={(open) => !open && setDeleteTarget(null)}
         itemName={deleteTarget?.name ?? ""}
         itemType="ordem de serviço"
-        onConfirm={() => { if (deleteTarget) deleteService(deleteTarget.id); }}
+        onConfirm={() => { if (deleteTarget) { deleteService(deleteTarget.id); if (token) apiDeleteServiceOrder(deleteTarget.id, token).catch(() => {}); } }}
       />
     </div>
   );

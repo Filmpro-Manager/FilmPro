@@ -310,7 +310,7 @@ export default function EstoquePage() {
         <TabsContent value="movements" className="space-y-4 mt-4">
           <div className="flex items-center gap-2">
             <Filter className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            {(["all", "entrada", "saida", "ajuste"] as const).map((t) => (
+            {(["all", "entrada", "saida"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setFilterMovType(t)}
@@ -321,7 +321,7 @@ export default function EstoquePage() {
                     : "border-border bg-background text-muted-foreground hover:border-foreground hover:text-foreground"
                 )}
               >
-                {t === "all" ? "Todos" : t === "entrada" ? "Entrada" : t === "saida" ? "Saída" : "Ajuste"}
+                {t === "all" ? "Todos" : t === "entrada" ? "Entrada" : "Saída"}
               </button>
             ))}
             <span className="text-xs text-muted-foreground ml-auto">

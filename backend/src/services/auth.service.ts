@@ -25,6 +25,7 @@ export async function selectStore(userId: string, storeId: string, companyId: st
 
   const token = generateToken({
     id: user.id,
+    name: user.name,
     email: user.email,
     role: user.role,
     companyId: user.companyId,
@@ -47,6 +48,7 @@ export async function login(input: LoginInput) {
 
   const token = generateToken({
     id: user.id,
+    name: user.name,
     email: user.email,
     role: user.role,
     companyId: user.companyId,

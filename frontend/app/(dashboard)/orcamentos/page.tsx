@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo, useEffect } from "react";
 import {
   Plus,
   Trash2,
@@ -28,6 +27,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 import { DataTable } from "@/components/shared/data-table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
@@ -36,9 +36,82 @@ import { QuoteDetailDialog } from "@/components/orcamentos/quote-detail-dialog";
 import { useQuotesStore } from "@/store/quotes-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useServicesStore } from "@/store/services-store";
+import { apiGetQuotes, apiDeleteQuote, apiUpdateQuoteStatus, apiGetServiceOrders, apiGetUsers, type ApiQuote, type ApiServiceOrder, type UserProfile } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { Quote, TableColumn, QuoteStatus, Appointment } from "@/types";
+import type { Quote, TableColumn, QuoteStatus, QuoteSubject, QuotePayment, Appointment } from "@/types";
 import { cn } from "@/lib/utils";
+
+// ─── Mapper ───────────────────────────────────────────────────────────────────
+
+function mapApiQuote(api: ApiQuote): Quote {
+  return {
+    id: api.id,
+    number: api.number,
+    issueDate: api.issueDate.slice(0, 10),
+    validUntil: api.validUntil ? api.validUntil.slice(0, 10) : "",
+    status: api.status as QuoteStatus,
+    clientId: api.clientId ?? "",
+    clientName: api.clientName,
+    clientPhone: api.clientPhone ?? undefined,
+    clientEmail: api.clientEmail ?? undefined,
+    clientDocument: api.clientDocument ?? undefined,
+    clientDocumentType: (api.clientDocumentType as "cpf" | "cnpj" | undefined) ?? undefined,
+    category: api.category as Quote["category"],
+    subject: api.subject as QuoteSubject | undefined,
+    sellerId: api.sellerId ?? undefined,
+    sellerName: api.sellerName ?? undefined,
+    createdById: api.createdById ?? undefined,
+    createdByName: api.createdByName ?? undefined,
+    items: api.items.map((item) => ({
+      id: item.id,
+      type: item.type as Quote["items"][0]["type"],
+      name: item.name,
+      description: item.description ?? undefined,
+      quantity: item.quantity,
+      unit: item.unit,
+      unitPrice: item.unitPrice,
+      discount: item.discount,
+      discountType: item.discountType as "value" | "percent",
+      total: item.total,
+      productId: item.productId ?? undefined,
+      serviceId: item.serviceId ?? undefined,
+      vehicleId: item.vehicleId ?? undefined,
+    })),
+    subtotal: api.subtotal,
+    discount: api.discount,
+    discountType: api.discountType as "value" | "percent" | undefined,
+    taxes: api.taxes ?? undefined,
+    totalValue: api.totalValue,
+    acceptedPaymentMethods: api.acceptedPaymentMethods,
+    payment: api.payment as QuotePayment | undefined,
+    notes: api.notes ?? undefined,
+    internalNotes: api.internalNotes ?? undefined,
+    convertedAt: api.convertedAt ?? undefined,
+    convertedToAppointmentId: api.convertedToAppointmentId ?? undefined,
+    createdAt: api.createdAt,
+    updatedAt: api.updatedAt,
+  };
+}
+
+function mapApiServiceOrder(api: ApiServiceOrder): Appointment {
+  return {
+    id: api.id,
+    clientId: api.clientId ?? "",
+    clientName: api.clientName,
+    vehicle: api.vehicle ?? "—",
+    serviceType: api.serviceType,
+    employeeId: api.employeeId ?? "",
+    employeeName: api.employeeName ?? "",
+    quoteId: api.quoteId ?? undefined,
+    date: api.date,
+    endDate: api.endDate ?? undefined,
+    startTime: api.startTime ?? undefined,
+    endTime: api.endTime ?? undefined,
+    status: api.status as Appointment["status"],
+    value: api.value,
+    notes: api.notes ?? undefined,
+  };
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -79,7 +152,6 @@ const SORT_LABELS: Record<SortKey, string> = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function OrcamentosPage() {
-  const router = useRouter();
   const [tab, setTab] = useState<"all" | QuoteStatus>("all");
 
   // Filtros
@@ -89,7 +161,11 @@ export default function OrcamentosPage() {
   const [filterCategory, setFilterCategory]   = useState<string>("all");
   const [filterMinValue, setFilterMinValue]   = useState("");
   const [filterMaxValue, setFilterMaxValue]   = useState("");
+  const [filterCreatedBy, setFilterCreatedBy] = useState<string>("all");
   const [sort, setSort]                       = useState<SortKey>("date_desc");
+
+  // Usuários (para filtro de criado por)
+  const [users, setUsers] = useState<UserProfile[]>([]);
 
   // Dialogs
   const [openForm, setOpenForm]         = useState(false);
@@ -97,51 +173,24 @@ export default function OrcamentosPage() {
   const [detailTarget, setDetailTarget] = useState<Quote | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
-  const { quotes, deleteQuote, updateStatus, convertToAppointment } = useQuotesStore();
-  const { addService } = useServicesStore();
+  const { quotes, setQuotes, deleteQuote, updateStatus } = useQuotesStore();
+  const { setServices } = useServicesStore();
+  const { token } = useAuthStore();
   const isEmployee = useAuthStore((s) => s.user?.role === "EMPLOYEE");
 
-  // ─── Converter orçamento em OS ──────────────────────────────────────────────
-  function handleConvert(quote: Quote) {
-    const sub = quote.subject;
-    let vehicle = "—";
-    if (sub?.type === "vehicle") {
-      const parts = [sub.brand, sub.model, sub.year].filter(Boolean).join(" ");
-      vehicle = sub.plate ? `${parts} — ${sub.plate}` : parts || "—";
-    } else if (sub?.address) {
-      vehicle = sub.address;
-    } else if (sub?.description) {
-      vehicle = sub.description;
-    }
-
-    const serviceType =
-      quote.items.find((i) => i.type === "service")?.name ??
-      quote.items[0]?.name ??
-      "Serviço";
-
-    const newOsId = `svc-${Date.now()}`;
-    const today = new Date().toISOString().slice(0, 10);
-
-    const newOs: Appointment = {
-      id: newOsId,
-      clientId: quote.clientId,
-      clientName: quote.clientName,
-      vehicle,
-      serviceType,
-      employeeId: "",
-      employeeName: "",
-      quoteId: quote.id,
-      date: today,
-      status: "draft",
-      value: quote.totalValue,
-      notes: quote.notes ?? quote.internalNotes ?? "",
-    };
-
-    addService(newOs);
-    convertToAppointment(quote.id, newOsId);
-    setDetailTarget(null);
-    router.push(`/ordens-de-servico/nova?id=${newOsId}`);
-  }
+  // ─── Carregar dados da API ────────────────────────────────────────────────
+  useEffect(() => {
+    if (!token) return;
+    apiGetQuotes(token)
+      .then((data) => setQuotes(data.map(mapApiQuote)))
+      .catch(() => {});
+    apiGetUsers(token)
+      .then(setUsers)
+      .catch(() => {});
+    apiGetServiceOrders(token)
+      .then((data) => setServices(data.map(mapApiServiceOrder)))
+      .catch(() => {});
+  }, [token]);
 
   const availableYears = useMemo(() => {
     const years = new Set(quotes.map((q) => q.createdAt.slice(0, 4)));
@@ -150,18 +199,20 @@ export default function OrcamentosPage() {
 
   const activeFilterCount = useMemo(() => {
     let n = 0;
-    if (search.trim())          n++;
-    if (filterMonth !== "all")  n++;
-    if (filterYear !== "all")   n++;
+    if (search.trim())            n++;
+    if (filterMonth !== "all")    n++;
+    if (filterYear !== "all")     n++;
     if (filterCategory !== "all") n++;
-    if (filterMinValue)         n++;
-    if (filterMaxValue)         n++;
+    if (filterMinValue)           n++;
+    if (filterMaxValue)           n++;
+    if (filterCreatedBy !== "all") n++;
     return n;
-  }, [search, filterMonth, filterYear, filterCategory, filterMinValue, filterMaxValue]);
+  }, [search, filterMonth, filterYear, filterCategory, filterMinValue, filterMaxValue, filterCreatedBy]);
 
   function clearFilters() {
     setSearch(""); setFilterMonth("all"); setFilterYear("all");
     setFilterCategory("all"); setFilterMinValue(""); setFilterMaxValue("");
+    setFilterCreatedBy("all");
   }
 
   const stats = useMemo(() => {
@@ -197,6 +248,9 @@ export default function OrcamentosPage() {
     if (filterCategory !== "all")
       result = result.filter((r) => r.category === filterCategory);
 
+    if (filterCreatedBy !== "all")
+      result = result.filter((r) => r.createdById === filterCreatedBy);
+
     const minV = parseFloat(filterMinValue.replace(",", "."));
     const maxV = parseFloat(filterMaxValue.replace(",", "."));
     if (!isNaN(minV)) result = result.filter((r) => r.totalValue >= minV);
@@ -215,7 +269,7 @@ export default function OrcamentosPage() {
     });
 
     return result;
-  }, [quotes, tab, search, filterMonth, filterYear, filterCategory, filterMinValue, filterMaxValue, sort]);
+  }, [quotes, tab, search, filterMonth, filterYear, filterCategory, filterMinValue, filterMaxValue, filterCreatedBy, sort]);
 
   function openNew() { setEditTarget(undefined); setOpenForm(true); }
   function openEdit(quote: Quote) { setEditTarget(quote); setOpenForm(true); }
@@ -278,7 +332,14 @@ export default function OrcamentosPage() {
     {
       key: "createdAt",
       header: "Criado em",
-      render: (row) => <span className="text-muted-foreground text-sm">{formatDate(row.createdAt.slice(0, 10))}</span>,
+      render: (row) => (
+        <div>
+          <span className="text-muted-foreground text-sm">{formatDate(row.createdAt.slice(0, 10))}</span>
+          {row.createdByName && (
+            <p className="text-xs text-muted-foreground">{row.createdByName}</p>
+          )}
+        </div>
+      ),
     },
     {
       key: "id",
@@ -382,57 +443,114 @@ export default function OrcamentosPage() {
                   <ChevronDown className="h-3.5 w-3.5 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-72 p-4 space-y-4">
-                <div className="flex items-center justify-between">
+              <PopoverContent align="end" sideOffset={8} className="w-80 p-0 overflow-hidden">
+                {/* Cabeçalho */}
+                <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/40">
                   <p className="text-sm font-semibold">Filtros avançados</p>
                   {activeFilterCount > 0 && (
-                    <button onClick={clearFilters} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
-                      <X className="h-3 w-3" /> Limpar
+                    <button
+                      onClick={clearFilters}
+                      className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                    >
+                      <X className="h-3 w-3" /> Limpar tudo
                     </button>
                   )}
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Mês</label>
-                  <Select value={filterMonth} onValueChange={setFilterMonth}>
-                    <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Todos os meses" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os meses</SelectItem>
-                      {MONTHS.map((m, i) => <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Ano</label>
-                  <Select value={filterYear} onValueChange={setFilterYear}>
-                    <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Todos os anos" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os anos</SelectItem>
-                      {availableYears.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Categoria</label>
-                  <Select value={filterCategory} onValueChange={setFilterCategory}>
-                    <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Todas" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas</SelectItem>
-                      <SelectItem value="automotive">Automotivo</SelectItem>
-                      <SelectItem value="architecture">Arquitetura</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Faixa de valor (R$)</label>
-                  <div className="flex gap-2 items-center">
-                    <Input placeholder="Mín." value={filterMinValue} onChange={(e) => setFilterMinValue(e.target.value.replace(/[^\d,.]/g, ""))} className="h-8 text-sm" />
-                    <span className="text-muted-foreground text-xs shrink-0">até</span>
-                    <Input placeholder="Máx." value={filterMaxValue} onChange={(e) => setFilterMaxValue(e.target.value.replace(/[^\d,.]/g, ""))} className="h-8 text-sm" />
+                {/* Corpo */}
+                <div className="p-4 space-y-4">
+                  {/* Período */}
+                  <div>
+                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Período</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">Mês</label>
+                        <Select value={filterMonth} onValueChange={setFilterMonth}>
+                          <SelectTrigger className="h-9 text-sm bg-secondary border-border">
+                            <SelectValue placeholder="Todos" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todos</SelectItem>
+                            {MONTHS.map((m, i) => <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">Ano</label>
+                        <Select value={filterYear} onValueChange={setFilterYear}>
+                          <SelectTrigger className="h-9 text-sm bg-secondary border-border">
+                            <SelectValue placeholder="Todos" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todos</SelectItem>
+                            {availableYears.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                   </div>
+
+                  <Separator />
+
+                  {/* Categoria */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Categoria</label>
+                    <Select value={filterCategory} onValueChange={setFilterCategory}>
+                      <SelectTrigger className="h-9 text-sm bg-secondary border-border">
+                        <SelectValue placeholder="Todas as categorias" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas as categorias</SelectItem>
+                        <SelectItem value="automotive">Automotivo</SelectItem>
+                        <SelectItem value="architecture">Arquitetura</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Separator />
+
+                  {/* Faixa de valor */}
+                  {!isEmployee && (
+                    <>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Faixa de valor (R$)</label>
+                        <div className="flex gap-2 items-center">
+                          <Input
+                            placeholder="Mínimo"
+                            value={filterMinValue}
+                            onChange={(e) => setFilterMinValue(e.target.value.replace(/[^\d,.]/g, ""))}
+                            className="h-9 text-sm bg-secondary border-border"
+                          />
+                          <span className="text-muted-foreground text-xs shrink-0">—</span>
+                          <Input
+                            placeholder="Máximo"
+                            value={filterMaxValue}
+                            onChange={(e) => setFilterMaxValue(e.target.value.replace(/[^\d,.]/g, ""))}
+                            className="h-9 text-sm bg-secondary border-border"
+                          />
+                        </div>
+                      </div>
+                      <Separator />
+                    </>
+                  )}
+
+                  {/* Criado por */}
+                  {users.length > 0 && (
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Criado por</label>
+                      <Select value={filterCreatedBy} onValueChange={setFilterCreatedBy}>
+                        <SelectTrigger className="h-9 text-sm bg-secondary border-border">
+                          <SelectValue placeholder="Todos os usuários" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos os usuários</SelectItem>
+                          {users.map((u) => (
+                            <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
               </PopoverContent>
             </Popover>
@@ -483,14 +601,28 @@ export default function OrcamentosPage() {
         onOpenChange={(open) => !open && setDetailTarget(null)}
         quote={detailTarget}
         onEdit={(q) => { setDetailTarget(null); openEdit(q); }}
-        onConvert={handleConvert}
-        onStatusChange={(id, status) => updateStatus(id, status)}
+        onStatusChange={async (id, status) => {
+          if (!token) return;
+          try {
+            await apiUpdateQuoteStatus(id, status, token);
+            updateStatus(id, status as QuoteStatus);
+          } catch {/* silencia */}
+        }}
       />
 
       <ConfirmDeleteDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        onConfirm={() => { if (deleteTarget) deleteQuote(deleteTarget.id); setDeleteTarget(null); }}
+        onConfirm={async () => {
+          if (!deleteTarget || !token) return;
+          try {
+            await apiDeleteQuote(deleteTarget.id, token);
+            deleteQuote(deleteTarget.id);
+          } catch {
+            // erro silenciado — toast poderia ser adicionado aqui
+          }
+          setDeleteTarget(null);
+        }}
         itemType="orçamento"
         itemName={deleteTarget?.name ?? ""}
       />

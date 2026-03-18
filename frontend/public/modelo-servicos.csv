@@ -1,0 +1,4 @@
+nome;categoria;valor;descricao;ativo
+Polimento Completo;automotive;350.00;Polimento e vitrificação de pintura automotiva;Sim
+Troca de Película;automotive;500.00;Aplicação de película protetora nos vidros;Sim
+Revestimento Fachada;architecture;2500.00;Aplicação de revestimento em fachada;Sim

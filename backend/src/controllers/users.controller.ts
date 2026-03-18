@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as usersService from '../services/users.service';
 import { JwtPayload } from '../utils/jwt';
+import { generateRandomPassword, sendWelcomeEmail } from '../utils/email';
 
 type AuthRequest = Request & { user: JwtPayload };
 
@@ -30,13 +31,53 @@ export async function create(req: Request, res: Response, next: NextFunction): P
   try {
     const requester = (req as AuthRequest).user;
 
-    // Owner só pode criar usuários vinculados a uma loja
-    if (requester.role === 'owner' && !req.body.storeId) {
-      res.status(400).json({ message: 'storeId é obrigatório: o dono só pode criar usuários dentro de uma loja' });
+    const { name, email, phone, role } = req.body as {
+      name?: string;
+      email?: string;
+      phone?: string;
+      role?: string;
+    };
+
+    if (!name || !email || !phone) {
+      res.status(400).json({ message: 'Campos obrigatórios: name, email, phone' });
       return;
     }
 
-    const user = await usersService.create(req.body);
+    // Owner só pode criar manager ou employee — nunca outro owner
+    const allowedRoles = ['manager', 'employee'];
+    const targetRole = (role ?? 'employee').toLowerCase();
+    if (requester.role === 'owner' && !allowedRoles.includes(targetRole)) {
+      res.status(403).json({ message: 'Você só pode criar usuários com perfil de Administrador ou Técnico' });
+      return;
+    }
+
+    // companyId e storeId sempre herdados do criador (segurança)
+    const companyId = requester.companyId;
+    const storeId = requester.storeId;
+
+    if (!companyId) {
+      res.status(400).json({ message: 'Usuário autenticado não possui empresa associada' });
+      return;
+    }
+
+    // Gera senha aleatória — nunca exposta na resposta
+    const tempPassword = generateRandomPassword();
+
+    const user = await usersService.create({
+      name,
+      email,
+      password: tempPassword,
+      phone,
+      role: targetRole,
+      companyId,
+      storeId,
+    });
+
+    // Envia e-mail com credenciais em background (não bloqueia resposta)
+    sendWelcomeEmail(email, name, tempPassword).catch((err) => {
+      console.error('[sendWelcomeEmail] Falha ao enviar e-mail de boas-vindas:', err);
+    });
+
     res.status(201).json(user);
   } catch (error) {
     next(error);

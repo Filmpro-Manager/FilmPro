@@ -1,9 +1,9 @@
 import { create } from "zustand";
-import { mockServiceCatalog } from "@/data/mock";
 import type { ServiceCatalog } from "@/types";
 
 interface ServiceCatalogState {
   services: ServiceCatalog[];
+  setServices: (services: ServiceCatalog[]) => void;
   addService: (service: ServiceCatalog) => void;
   updateService: (service: ServiceCatalog) => void;
   toggleActive: (id: string) => void;
@@ -11,7 +11,9 @@ interface ServiceCatalogState {
 }
 
 export const useServiceCatalogStore = create<ServiceCatalogState>((set) => ({
-  services: [...mockServiceCatalog],
+  services: [],
+
+  setServices: (services) => set({ services }),
 
   addService: (service) =>
     set((state) => ({ services: [service, ...state.services] })),

@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { FormField } from "@/components/shared/form-field";
 import {
   Select,
@@ -22,14 +21,45 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Employee } from "@/types";
 import { useEmployeesStore } from "@/store/employees-store";
+import { useAuthStore } from "@/store/auth-store";
+import { apiCreateUser, apiUpdateUser } from "@/lib/api";
+import { maskPhone } from "@/lib/masks";
+import { toast } from "sonner";
 
 interface EmployeeFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   employee?: Employee | null;
+}
+
+function mapApiUserToEmployee(u: {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  status: string;
+  createdAt: string;
+}): Employee {
+  const roleUpper = u.role.toUpperCase() as Employee["userRole"];
+  return {
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    phone: u.phone ?? "",
+    role:
+      u.role === "owner" || u.role === "manager"
+        ? "Administrador"
+        : "Técnico",
+    userRole: roleUpper,
+    active: u.status === "active",
+    hireDate: u.createdAt.slice(0, 10),
+    servicesCompleted: 0,
+    revenueGenerated: 0,
+    specialties: [],
+  };
 }
 
 export function EmployeeFormDialog({
@@ -39,6 +69,7 @@ export function EmployeeFormDialog({
 }: EmployeeFormDialogProps) {
   const isEditing = !!employee;
   const { addEmployee, updateEmployee } = useEmployeesStore();
+  const { token } = useAuthStore();
 
   const {
     register,
@@ -52,8 +83,7 @@ export function EmployeeFormDialog({
       name: "",
       email: "",
       phone: "",
-      role: "EMPLOYEE",
-      isActive: true,
+      role: "employee",
       specialties: [],
     },
   });
@@ -64,8 +94,10 @@ export function EmployeeFormDialog({
         name: employee.name,
         email: employee.email,
         phone: employee.phone ?? "",
-        role: (employee.userRole === "OWNER" ? "OWNER" : employee.userRole === "MANAGER" ? "MANAGER" : "EMPLOYEE") as "OWNER" | "MANAGER" | "EMPLOYEE",
-        isActive: employee.active ?? true,
+        role:
+          employee.userRole === "MANAGER" || (employee.userRole as string) === "manager"
+            ? "manager"
+            : "employee",
         specialties: employee.specialties ?? [],
       });
     } else {
@@ -73,41 +105,46 @@ export function EmployeeFormDialog({
         name: "",
         email: "",
         phone: "",
-        role: "EMPLOYEE",
-        isActive: true,
+        role: "employee",
         specialties: [],
       });
     }
   }, [employee, reset, open]);
 
   const onSubmit = async (data: EmployeeFormData) => {
-    const now = new Date().toISOString();
-    if (employee) {
-      updateEmployee({
-        ...employee,
-        name: data.name,
-        email: data.email,
-        phone: data.phone ?? "",
-        userRole: data.role,
-        active: data.isActive,
-        specialties: data.specialties,
-      });
-    } else {
-      addEmployee({
-        id: `emp-${Date.now()}`,
-        name: data.name,
-        email: data.email,
-        phone: data.phone ?? "",
-        role: data.role === "OWNER" ? "Dono" : data.role === "MANAGER" ? "Gerente" : "Técnico",
-        userRole: data.role,
-        active: data.isActive,
-        specialties: data.specialties,
-        hireDate: now.slice(0, 10),
-        servicesCompleted: 0,
-        revenueGenerated: 0,
-      });
+    if (!token) {
+      toast.error("Sessão expirada. Faça login novamente.");
+      return;
     }
-    onOpenChange(false);
+
+    try {
+      if (isEditing && employee) {
+        // Atualiza dados básicos
+        const updated = await apiUpdateUser(
+          employee.id,
+          { name: data.name, phone: data.phone ?? "", role: data.role },
+          token,
+        );
+
+        updateEmployee(mapApiUserToEmployee(updated));
+        toast.success("Usuário atualizado com sucesso!");
+      } else {
+        const created = await apiCreateUser(
+          {
+            name: data.name,
+            email: data.email,
+            phone: data.phone ?? "",
+            role: data.role,
+          },
+          token,
+        );
+        addEmployee(mapApiUserToEmployee(created));
+        toast.success("Usuário criado! As credenciais foram enviadas para o e-mail cadastrado.");
+      }
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao salvar usuário");
+    }
   };
 
   return (
@@ -115,8 +152,13 @@ export function EmployeeFormDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? "Editar Membro" : "Novo Membro da Equipe"}
+            {isEditing ? "Editar Usuário" : "Novo Usuário"}
           </DialogTitle>
+          {!isEditing && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Uma senha temporária será gerada automaticamente e enviada para o e-mail cadastrado.
+            </p>
+          )}
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -128,51 +170,39 @@ export function EmployeeFormDialog({
             <Input
               type="email"
               placeholder="joao@empresa.com"
+              disabled={isEditing}
               {...register("email")}
             />
           </FormField>
 
           <FormField label="Telefone" error={errors.phone?.message}>
-            <Input placeholder="(11) 99999-9999" {...register("phone")} />
+            <Input
+              placeholder="(11) 99999-9999"
+              {...register("phone")}
+              onChange={(e) => {
+                e.target.value = maskPhone(e.target.value);
+                register("phone").onChange(e);
+              }}
+            />
           </FormField>
 
-          <FormField label="Função" error={errors.role?.message} required>
+          <FormField label="Perfil de Acesso" error={errors.role?.message} required>
             <Controller
               name="role"
               control={control}
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione a função" />
+                    <SelectValue placeholder="Selecione o perfil" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="EMPLOYEE">Técnico</SelectItem>
-                    <SelectItem value="MANAGER">Gerente</SelectItem>
-                    <SelectItem value="OWNER">Dono</SelectItem>
+                    <SelectItem value="employee">Técnico (Usuário)</SelectItem>
+                    <SelectItem value="manager">Administrador</SelectItem>
                   </SelectContent>
                 </Select>
               )}
             />
           </FormField>
-
-          <div className="flex items-center justify-between rounded-lg border p-3">
-            <div>
-              <Label className="text-sm font-medium">Membro Ativo</Label>
-              <p className="text-xs text-muted-foreground">
-                Membros inativos não aparecem nos agendamentos
-              </p>
-            </div>
-            <Controller
-              name="isActive"
-              control={control}
-              render={({ field }) => (
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              )}
-            />
-          </div>
 
           <DialogFooter>
             <Button
@@ -187,7 +217,7 @@ export function EmployeeFormDialog({
                 ? "Salvando..."
                 : isEditing
                 ? "Salvar Alterações"
-                : "Adicionar Membro"}
+                : "Criar Usuário"}
             </Button>
           </DialogFooter>
         </form>
@@ -195,3 +225,4 @@ export function EmployeeFormDialog({
     </Dialog>
   );
 }
+

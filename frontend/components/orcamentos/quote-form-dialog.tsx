@@ -38,9 +38,22 @@ import { useQuotesStore } from "@/store/quotes-store";
 import { useClientsStore } from "@/store/clients-store";
 import { useServiceCatalogStore } from "@/store/service-catalog-store";
 import { useProductsStore } from "@/store/products-store";
+import { useAuthStore } from "@/store/auth-store";
 import { maskCurrency, parseCurrency } from "@/lib/masks";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  apiCreateQuote,
+  apiUpdateQuote,
+  apiGetClients,
+  apiGetServices,
+  apiGetInventoryItems,
+  type CreateQuoteData,
+  type ApiQuote,
+  type ApiClient,
+} from "@/lib/api";
+import { mapApiItemToProduct } from "@/store/products-store";
+import type { ServiceCategory } from "@/types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function todayStr(): string {
@@ -113,10 +126,73 @@ export function QuoteFormDialog({
   onOpenChange,
   initialQuote,
 }: QuoteFormDialogProps) {
-  const { quotes, addQuote, updateQuote } = useQuotesStore();
-  const { clients } = useClientsStore();
-  const { services: catalogServices } = useServiceCatalogStore();
-  const { products } = useProductsStore();
+  const { addQuote, updateQuote } = useQuotesStore();
+  const { clients, setClients } = useClientsStore();
+  const { services: catalogServices, setServices } = useServiceCatalogStore();
+  const { products, setProducts } = useProductsStore();
+  const { token } = useAuthStore();
+  const [submitting, setSubmitting] = useState(false);
+
+  // ─── Carregar dados dependentes ao abrir ─────────────────────────────────
+  useEffect(() => {
+    if (!open || !token) return;
+
+    function mapClient(api: ApiClient) {
+      const v = api.vehicles[0];
+      return {
+        id: api.id,
+        name: api.name,
+        phone: api.phone ?? "",
+        email: api.email ?? undefined,
+        document: api.document ?? undefined,
+        notes: api.notes ?? undefined,
+        vehicles: api.vehicles.map((vv) => ({
+          id: vv.id, brand: vv.brand, model: vv.model,
+          year: vv.year ?? undefined, plate: vv.plate ?? "", color: vv.color ?? undefined,
+        })),
+        vehicle: v ? { id: v.id, brand: v.brand, model: v.model, year: v.year ?? undefined, plate: v.plate ?? "", color: v.color ?? undefined } : undefined,
+        serviceHistory: [],
+        totalSpent: 0,
+        createdAt: api.createdAt,
+      };
+    }
+
+    const promises: Promise<void>[] = [];
+
+    if (clients.length === 0) {
+      promises.push(
+        apiGetClients(token)
+          .then((data) => setClients(data.map(mapClient)))
+          .catch(() => {})
+      );
+    }
+    if (catalogServices.length === 0) {
+      promises.push(
+        apiGetServices(token)
+          .then((data) =>
+            setServices(
+              data.map((s) => ({
+                ...s,
+                category: s.category as ServiceCategory,
+                description: s.description ?? undefined,
+                estimatedMinutes: s.estimatedMinutes ?? undefined,
+              }))
+            )
+          )
+          .catch(() => {})
+      );
+    }
+    if (products.length === 0) {
+      promises.push(
+        apiGetInventoryItems(token)
+          .then((data) => setProducts(data.map(mapApiItemToProduct)))
+          .catch(() => {})
+      );
+    }
+
+    if (promises.length > 0) Promise.all(promises);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, token]);
 
   const isEditing = !!initialQuote;
 
@@ -129,7 +205,7 @@ export function QuoteFormDialog({
 
   // Product/film preview
   const [previewProductId, setPreviewProductId] = useState("");
-  const [productMeters, setProductMeters] = useState("1");
+  const [productMeters, setProductMeters] = useState("");
 
   // Items
   const [items, setItems] = useState<QuoteItem[]>([]);
@@ -177,7 +253,7 @@ export function QuoteFormDialog({
     setClientId("");
     setPreviewServiceId("");
     setPreviewProductId("");
-    setProductMeters("1");
+    setProductMeters("");
     setItems([]);
     setPriceDisplays({});
     setDiscountDisplays({});
@@ -236,25 +312,30 @@ export function QuoteFormDialog({
     }
     setPreviewServiceId("");
     setPreviewProductId("");
-    setProductMeters("1");
+    setProductMeters("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialQuote]);
 
   // ─── Handlers ────────────────────────────────────────────────────────────
-  function handleAddService() {
-    if (!previewService) return;
+  function handleAddService(serviceId: string) {
+    const service = catalogServices.find((s) => s.id === serviceId);
+    if (!service) return;
+    if (items.some((it) => it.type === "service" && it.serviceId === service.id)) {
+      toast.warning("Este serviço já foi adicionado ao orçamento");
+      return;
+    }
     addItemToList({
       id: crypto.randomUUID(),
       type: "service" as QuoteItemType,
-      name: previewService.name,
-      description: previewService.description,
+      name: service.name,
+      description: service.description,
       quantity: 1,
       unit: "un",
-      unitPrice: previewService.price,
+      unitPrice: service.price,
       discount: 0,
       discountType: "value" as QuoteDiscountType,
-      total: previewService.price,
-      serviceId: previewService.id,
+      total: service.price,
+      serviceId: service.id,
     });
     setPreviewServiceId("");
     setErrors((prev) => { const e = { ...prev }; delete e.itemsService; return e; });
@@ -284,7 +365,7 @@ export function QuoteFormDialog({
       productId: previewProduct.id,
     });
     setPreviewProductId("");
-    setProductMeters("1");
+    setProductMeters("");
     setErrors((prev) => { const e = { ...prev }; delete e.itemsProduct; return e; });
   }
 
@@ -401,33 +482,32 @@ export function QuoteFormDialog({
     if (!clientId) errs.clientId = "Selecione um cliente";
     if (!items.some((it) => it.type === "service"))
       errs.itemsService = "Adicione ao menos um serviço";
-    if (!items.some((it) => it.type === "product"))
+    const productItems = items.filter((it) => it.type === "product");
+    if (productItems.length === 0)
       errs.itemsProduct = "Adicione ao menos uma película";
+    else if (productItems.every((it) => it.quantity <= 0))
+      errs.itemsProduct = "Informe a metragem da película";
     if (acceptedPaymentMethods.length === 0)
       errs.payment = "Selecione ao menos uma forma de pagamento";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!validate()) return;
-    const year = new Date().getFullYear();
-    const padded = String(quotes.length + 1).padStart(4, "0");
-    const number = isEditing
-      ? initialQuote!.number
-      : `ORC-${year}-${padded}`;
+    if (!token) { toast.error("Sessão expirada, faça login novamente"); return; }
+    if (submitting) return;
 
     const client = clients.find((c) => c.id === clientId);
     const clientName = client?.name ?? "";
-    const clientPhone =
-      (client as unknown as { phone?: string })?.phone ?? "";
+    const clientPhone = (client as unknown as { phone?: string })?.phone ?? "";
     const clientEmail = client?.email ?? "";
 
-    let subjectData = undefined;
+    let subjectData: CreateQuoteData["subject"] = undefined;
     if (quoteCategory === "automotive" && client?.vehicle) {
       const v = client.vehicle;
       subjectData = {
-        type: "vehicle" as const,
+        type: "vehicle",
         brand: v.brand,
         model: v.model,
         year: v.year ? String(v.year) : undefined,
@@ -436,43 +516,106 @@ export function QuoteFormDialog({
       };
     }
 
-    const quote = {
-      id: isEditing ? initialQuote!.id : crypto.randomUUID(),
-      number,
-      category: quoteCategory,
-      issueDate: todayStr(),
-      validUntil: todayStr(),
-      status: "draft" as const,
-      clientId,
+    const payload: CreateQuoteData = {
+      clientId: clientId || undefined,
       clientName,
       clientPhone: clientPhone || undefined,
       clientEmail: clientEmail || undefined,
+      category: quoteCategory,
       subject: subjectData,
-      items: items.map((it) => ({ ...it, total: calcItemTotal(it) })),
+      items: items.map((it) => ({
+        type: it.type,
+        name: it.name,
+        description: it.description,
+        quantity: it.quantity,
+        unit: it.unit,
+        unitPrice: it.unitPrice,
+        discount: it.discount,
+        discountType: it.discountType,
+        total: calcItemTotal(it),
+        productId: it.productId,
+        serviceId: it.serviceId,
+        vehicleId: it.vehicleId,
+      })),
       subtotal,
       discount: rawDiscount,
       discountType: rawDiscount > 0 ? discountType : undefined,
       totalValue,
-      acceptedPaymentMethods: acceptedPaymentMethods.length
-        ? acceptedPaymentMethods
-        : undefined,
-      payment: paymentNotes
-        ? { method: "", installments: 1, notes: paymentNotes }
-        : undefined,
+      acceptedPaymentMethods,
+      payment: paymentNotes ? { method: "", installments: 1, notes: paymentNotes } : undefined,
       notes: notes || undefined,
       internalNotes: internalNotes || undefined,
-      createdAt: isEditing
-        ? initialQuote!.createdAt
-        : new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    } as Quote & { category: QuoteCategory; acceptedPaymentMethods?: string[] };
+      issueDate: todayStr(),
+      validUntil: undefined,
+    };
 
-    if (isEditing) {
-      updateQuote(quote.id, quote as Quote);
-    } else {
-      addQuote(quote as Quote);
+    setSubmitting(true);
+    try {
+      let result: ApiQuote;
+      if (isEditing) {
+        result = await apiUpdateQuote(initialQuote!.id, payload, token);
+        updateQuote(mapApiToQuote(result));
+        toast.success("Orçamento atualizado com sucesso!");
+      } else {
+        result = await apiCreateQuote(payload, token);
+        addQuote(mapApiToQuote(result));
+        toast.success("Orçamento criado com sucesso!");
+      }
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao salvar orçamento");
+    } finally {
+      setSubmitting(false);
     }
-    onOpenChange(false);
+  }
+
+  // ─── API → Quote mapper (local helper) ───────────────────────────────────
+  function mapApiToQuote(api: ApiQuote): Quote {
+    return {
+      id: api.id,
+      number: api.number,
+      issueDate: api.issueDate.slice(0, 10),
+      validUntil: api.validUntil ? api.validUntil.slice(0, 10) : "",
+      status: api.status as Quote["status"],
+      clientId: api.clientId ?? "",
+      clientName: api.clientName,
+      clientPhone: api.clientPhone ?? undefined,
+      clientEmail: api.clientEmail ?? undefined,
+      clientDocument: api.clientDocument ?? undefined,
+      clientDocumentType: (api.clientDocumentType as "cpf" | "cnpj" | undefined) ?? undefined,
+      category: api.category as Quote["category"],
+      subject: api.subject as Quote["subject"],
+      sellerId: api.sellerId ?? undefined,
+      sellerName: api.sellerName ?? undefined,
+      items: api.items.map((item) => ({
+        id: item.id,
+        type: item.type as Quote["items"][0]["type"],
+        name: item.name,
+        description: item.description ?? undefined,
+        quantity: item.quantity,
+        unit: item.unit,
+        unitPrice: item.unitPrice,
+        discount: item.discount,
+        discountType: item.discountType as "value" | "percent",
+        total: item.total,
+        productId: item.productId ?? undefined,
+        serviceId: item.serviceId ?? undefined,
+        vehicleId: item.vehicleId ?? undefined,
+      })),
+      subtotal: api.subtotal,
+      discount: api.discount,
+      discountType: api.discountType as "value" | "percent" | undefined,
+      taxes: api.taxes ?? undefined,
+      totalValue: api.totalValue,
+      acceptedPaymentMethods: api.acceptedPaymentMethods,
+      payment: api.payment as Quote["payment"],
+      notes: api.notes ?? undefined,
+      internalNotes: api.internalNotes ?? undefined,
+      convertedAt: api.convertedAt ?? undefined,
+      convertedToAppointmentId: api.convertedToAppointmentId ?? undefined,
+      createdAt: api.createdAt,
+      updatedAt: api.updatedAt,
+    };
   }
 
   // ─── Render ──────────────────────────────────────────────────────────────
@@ -654,7 +797,7 @@ export function QuoteFormDialog({
                 </Label>
                 <Select
                   value={previewServiceId}
-                  onValueChange={setPreviewServiceId}
+                  onValueChange={(id) => handleAddService(id)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Escolha um serviço..." />
@@ -675,48 +818,7 @@ export function QuoteFormDialog({
                 </Select>
               </div>
 
-              {/* Service preview card */}
-              {previewService && (
-                <div className="mt-3 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 space-y-1.5">
-                      <p className="font-semibold text-sm">
-                        {previewService.name}
-                      </p>
-                      {previewService.description && (
-                        <p className="text-xs text-muted-foreground">
-                          {previewService.description}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-3 flex-wrap pt-0.5">
-                        {previewService.estimatedMinutes && (
-                          <span className="text-xs text-muted-foreground">
-                            ⏱ {fmtDuration(previewService.estimatedMinutes)}
-                          </span>
-                        )}
-                        <span className="text-sm font-bold text-primary">
-                          {maskCurrency(
-                            String(Math.round(previewService.price * 100))
-                          )}
-                        </span>
-                        <Badge variant="secondary" className="text-xs">
-                          {quoteCategory === "automotive"
-                            ? "Automotivo"
-                            : "Arquitetura"}
-                        </Badge>
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={handleAddService}
-                      className="shrink-0"
-                    >
-                      <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar
-                    </Button>
-                  </div>
-                </div>
-              )}
+
             </section>
 
             <Separator />
@@ -902,43 +1004,47 @@ export function QuoteFormDialog({
 
                       {/* Row 2: qty, unit, price, discount, total */}
                       <div className="grid grid-cols-12 gap-2 items-end">
-                        <div className="col-span-2">
-                          <Label className="text-xs">Qtd</Label>
-                          <Input
-                            className="h-8 text-sm text-center"
-                            type="number"
-                            min={0.01}
-                            step={item.unit === "m²" ? 0.1 : 1}
-                            value={item.quantity}
-                            onChange={(e) =>
-                              updateItem(
-                                item.id,
-                                "quantity",
-                                parseFloat(e.target.value) || 1
-                              )
-                            }
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <Label className="text-xs">Unid.</Label>
-                          <Select
-                            value={item.unit}
-                            onValueChange={(v) => updateItem(item.id, "unit", v)}
-                          >
-                            <SelectTrigger className="h-8 text-sm">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="un">un</SelectItem>
-                              <SelectItem value="m²">m²</SelectItem>
-                              <SelectItem value="m">m</SelectItem>
-                              <SelectItem value="h">h</SelectItem>
-                              <SelectItem value="cx">cx</SelectItem>
-                              <SelectItem value="kg">kg</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="col-span-3">
+                        {item.type !== "service" && (
+                          <div className="col-span-2">
+                            <Label className="text-xs">Qtd</Label>
+                            <Input
+                              className="h-8 text-sm text-center"
+                              type="number"
+                              min={0.01}
+                              step={item.unit === "m²" ? 0.1 : 1}
+                              value={item.quantity}
+                              onChange={(e) =>
+                                updateItem(
+                                  item.id,
+                                  "quantity",
+                                  parseFloat(e.target.value) || 1
+                                )
+                              }
+                            />
+                          </div>
+                        )}
+                        {item.type !== "service" && (
+                          <div className="col-span-2">
+                            <Label className="text-xs">Unid.</Label>
+                            <Select
+                              value={item.unit}
+                              onValueChange={(v) => updateItem(item.id, "unit", v)}
+                            >
+                              <SelectTrigger className="h-8 text-sm">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="un">un</SelectItem>
+                                <SelectItem value="m²">m²</SelectItem>
+                                <SelectItem value="m">m</SelectItem>
+                                <SelectItem value="h">h</SelectItem>
+                                <SelectItem value="cx">cx</SelectItem>
+                                <SelectItem value="kg">kg</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                        <div className={item.type === "service" ? "col-span-4" : "col-span-3"}>
                           <Label className="text-xs">
                             {item.unit === "m²" ? "Preço/m²" : "Preço unit."}
                           </Label>
@@ -954,7 +1060,7 @@ export function QuoteFormDialog({
                             placeholder="R$ 0,00"
                           />
                         </div>
-                        <div className="col-span-3">
+                        <div className={item.type === "service" ? "col-span-4" : "col-span-3"}>
                           <Label className="text-xs">Desconto</Label>
                           <div className="flex gap-1">
                             <Select
@@ -995,7 +1101,7 @@ export function QuoteFormDialog({
                             />
                           </div>
                         </div>
-                        <div className="col-span-2 text-right">
+                        <div className={`${item.type === "service" ? "col-span-4" : "col-span-2"} text-right`}>
                           <Label className="text-xs text-muted-foreground">
                             Total
                           </Label>
@@ -1180,11 +1286,11 @@ export function QuoteFormDialog({
             </span>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
               Cancelar
             </Button>
-            <Button onClick={handleSubmit}>
-              {isEditing ? "Salvar alterações" : "Criar Orçamento"}
+            <Button onClick={handleSubmit} disabled={submitting}>
+              {submitting ? "Salvando…" : isEditing ? "Salvar alterações" : "Criar Orçamento"}
             </Button>
           </div>
         </div>

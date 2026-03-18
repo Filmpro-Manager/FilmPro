@@ -60,6 +60,9 @@ model Store {
   vehicles           Vehicle[]
   inventoryItems     InventoryItem[]
   inventoryMovements InventoryMovement[]
+  serviceCatalog     ServiceCatalog[]
+  quotes             Quote[]
+  serviceOrders      ServiceOrder[]
 
   @@map("stores")
 }
@@ -91,6 +94,8 @@ model User {
 
   inventoryMovements InventoryMovement[]
   inventoryItemsCreated InventoryItem[] @relation("InventoryCreatedBy")
+  quotesCreated Quote[] @relation("QuoteCreatedBy")
+  serviceOrdersCreated ServiceOrder[] @relation("ServiceOrderCreatedBy")
 
   @@map("users")
 }
@@ -113,6 +118,7 @@ model Client {
   updatedAt DateTime @updatedAt       @map("updated_at")
 
   vehicles  Vehicle[]
+  quotes    Quote[]
 
   @@map("clients")
 }
@@ -202,5 +208,172 @@ model InventoryMovement {
   createdAt       DateTime @default(now()) @map("created_at")
 
   @@map("inventory_movements")
+}
+
+// ─────────────────────────────────────────
+// SERVICE CATALOG
+// ─────────────────────────────────────────
+model ServiceCatalog {
+  id               String   @id @default(uuid())
+  storeId          String   @map("store_id")
+  store            Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  name             String
+  description      String?
+  category         String   // automotive | architecture
+  price            Float
+  estimatedMinutes Int?     @map("estimated_minutes")
+  isActive         Boolean  @default(true) @map("is_active")
+
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt      @map("updated_at")
+
+  @@map("service_catalog")
+}
+
+// ─────────────────────────────────────────
+// QUOTES (Orçamentos)
+// ─────────────────────────────────────────
+model Quote {
+  id        String @id @default(uuid())
+  storeId   String @map("store_id")
+  store     Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  number    String // ORC-2026-001
+
+  // Status: draft | sent | approved | converted | expired | rejected
+  status    String @default("draft")
+
+  // Cliente (desnormalizado p/ histórico)
+  clientId           String? @map("client_id")
+  client             Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  clientName         String  @map("client_name")
+  clientPhone        String? @map("client_phone")
+  clientEmail        String? @map("client_email")
+  clientDocument     String? @map("client_document")
+  clientDocumentType String? @map("client_document_type")
+
+  // Categoria e sujeito (JSON – veículo, edificação, etc.)
+  category String? // automotive | architecture
+  subject  Json?   // QuoteSubject
+
+  // Vendedor
+  sellerId   String? @map("seller_id")
+  sellerName String? @map("seller_name")
+
+  // Criado por
+  createdById   String? @map("created_by_id")
+  createdBy     User?   @relation("QuoteCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdByName String? @map("created_by_name")
+
+  // Totais
+  subtotal     Float  @default(0)
+  discount     Float  @default(0)
+  discountType String? @map("discount_type") // value | percent
+  taxes        Float?
+  totalValue   Float  @default(0) @map("total_value")
+
+  // Pagamento
+  acceptedPaymentMethods String[] @map("accepted_payment_methods")
+  payment                Json?    // QuotePayment
+
+  // Notas
+  notes         String?
+  internalNotes String? @map("internal_notes")
+
+  // Datas
+  issueDate  DateTime  @default(now()) @map("issue_date")
+  validUntil DateTime? @map("valid_until")
+
+  // Conversão para OS
+  convertedAt              DateTime? @map("converted_at")
+  convertedToAppointmentId String?   @map("converted_to_appointment_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  items QuoteItem[]
+
+  @@map("quotes")
+}
+
+model QuoteItem {
+  id      String @id @default(uuid())
+  quoteId String @map("quote_id")
+  quote   Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  type         String // service | product | other
+  name         String
+  description  String?
+  quantity     Float
+  unit         String @default("un")
+  unitPrice    Float  @map("unit_price")
+  discount     Float  @default(0)
+  discountType String @default("value") @map("discount_type")
+  total        Float
+
+  productId String? @map("product_id")
+  serviceId String? @map("service_id")
+  vehicleId String? @map("vehicle_id")
+
+  @@map("quote_items")
+}
+
+// ─────────────────────────────────────────
+// SERVICE ORDERS (Ordens de Serviço)
+// ─────────────────────────────────────────
+model ServiceOrder {
+  id      String @id @default(uuid())
+  storeId String @map("store_id")
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  number  String // OS-2026-001
+
+  // Origem do orçamento
+  quoteId String? @unique @map("quote_id")
+
+  // Cliente (desnormalizado)
+  clientId   String? @map("client_id")
+  clientName String  @map("client_name")
+
+  // Objeto do serviço
+  vehicle     String?
+  subject     Json?
+
+  // Serviço principal
+  serviceType String  @default("Serviço") @map("service_type")
+
+  // Técnico
+  employeeId   String? @map("employee_id")
+  employeeName String? @map("employee_name")
+
+  // Quando
+  date      String
+  endDate   String? @map("end_date")
+  startTime String? @map("start_time")
+  endTime   String? @map("end_time")
+
+  // Status: draft | scheduled | in_progress | completed | cancelled
+  status String @default("scheduled")
+
+  // Valor
+  value Float @default(0)
+
+  // Itens (JSON – cópia dos itens do orçamento)
+  items Json?
+
+  // Notas
+  notes         String?
+  internalNotes String? @map("internal_notes")
+
+  // Criado por
+  createdById   String? @map("created_by_id")
+  createdBy     User?   @relation("ServiceOrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdByName String? @map("created_by_name")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  @@map("service_orders")
 }
 

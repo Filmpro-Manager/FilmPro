@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
 import { Badge } from "@/components/ui/badge";
@@ -9,8 +9,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useEmployeesStore } from "@/store/employees-store";
 import { useServicesStore } from "@/store/services-store";
+import { useAuthStore } from "@/store/auth-store";
 import { formatCurrency } from "@/lib/utils";
 import { Appointment, Employee } from "@/types";
+import { apiGetUsers, apiDeleteUser, type UserProfile } from "@/lib/api";
+import { toast } from "sonner";
 import {
   UserPlus,
   Phone,
@@ -27,6 +30,26 @@ import {
 } from "lucide-react";
 import { EmployeeFormDialog } from "@/components/equipe/employee-form-dialog";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
+
+function mapApiUserToEmployee(u: UserProfile): Employee {
+  const roleUpper = u.role.toUpperCase() as Employee["userRole"];
+  return {
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    phone: (u as unknown as { phone?: string }).phone ?? "",
+    role:
+      u.role === "owner" || u.role === "manager"
+        ? "Administrador"
+        : "Técnico",
+    userRole: roleUpper,
+    active: u.status === "active",
+    hireDate: u.createdAt.slice(0, 10),
+    servicesCompleted: 0,
+    revenueGenerated: 0,
+    specialties: [],
+  };
+}
 
 function getInitials(name: string) {
   return name
@@ -119,27 +142,42 @@ function toLocalDateString(date: Date): string {
 }
 
 const roleLabel: Record<string, string> = {
-  OWNER: "Dono",
-  MANAGER: "Gerente",
+  OWNER: "Administrador",
+  MANAGER: "Administrador",
   EMPLOYEE: "Técnico",
+  owner: "Administrador",
+  manager: "Administrador",
+  employee: "Técnico",
 };
 
 const roleVariant: Record<string, "blue" | "secondary" | "default"> = {
   OWNER: "default",
   MANAGER: "blue",
   EMPLOYEE: "secondary",
+  owner: "default",
+  manager: "blue",
+  employee: "secondary",
 };
 
 export default function EquipePage() {
   const today = toLocalDateString(new Date());
   const employees = useEmployeesStore((s) => s.employees);
-  const deleteEmployee = useEmployeesStore((s) => s.deleteEmployee);
+  const setEmployees = useEmployeesStore((s) => s.setEmployees);
+  const deleteEmployeeStore = useEmployeesStore((s) => s.deleteEmployee);
   const services = useServicesStore((s) => s.services);
+  const { token } = useAuthStore();
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [selectedDate, setSelectedDate] = useState(today);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    apiGetUsers(token)
+      .then((data) => setEmployees(data.map(mapApiUserToEmployee)))
+      .catch(() => toast.error("Erro ao carregar usuários"));
+  }, [token]);
 
   const filtered = employees.filter(
     (emp) =>
@@ -247,18 +285,19 @@ export default function EquipePage() {
           className="max-w-sm"
         />
         <div className="flex items-center gap-2 sm:ml-auto">
-          <CalendarDays className="w-4 h-4 text-muted-foreground shrink-0" />
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          />
+          <label className="flex items-center gap-2 h-9 px-3 rounded-md border border-input bg-background text-sm shadow-sm cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors focus-within:ring-1 focus-within:ring-ring">
+            <CalendarDays className="w-4 h-4 text-muted-foreground pointer-events-none shrink-0" />
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="bg-transparent outline-none text-sm text-foreground [color-scheme:light] dark:[color-scheme:dark] cursor-pointer"
+            />
+          </label>
           {!isToday && (
             <Button
               variant="outline"
               size="sm"
-              className="text-xs h-9"
               onClick={() => setSelectedDate(today)}
             >
               Hoje
@@ -492,8 +531,18 @@ export default function EquipePage() {
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
         itemName={deleteTarget?.name ?? ""}
-        itemType="membro"
-        onConfirm={() => { if (deleteTarget) deleteEmployee(deleteTarget.id); }}
+        itemType="usuário"
+        onConfirm={async () => {
+          if (!deleteTarget || !token) return;
+          try {
+            await apiDeleteUser(deleteTarget.id, token);
+            deleteEmployeeStore(deleteTarget.id);
+            setDeleteTarget(null);
+            toast.success("Usuário removido com sucesso!");
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Erro ao remover usuário");
+          }
+        }}
       />
     </div>
   );
