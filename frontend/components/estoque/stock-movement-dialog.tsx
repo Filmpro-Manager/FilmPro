@@ -97,11 +97,17 @@ export function StockMovementDialog({ open, onOpenChange }: StockMovementDialogP
                 <SelectValue placeholder="Selecione a película" />
               </SelectTrigger>
               <SelectContent>
-                {products.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.brand} {p.model}
-                  </SelectItem>
-                ))}
+                {products.length === 0 ? (
+                  <div className="py-6 text-center text-sm text-muted-foreground">
+                    Nenhuma película cadastrada
+                  </div>
+                ) : (
+                  products.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.brand} {p.model}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </FormField>

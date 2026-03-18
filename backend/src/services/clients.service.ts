@@ -8,6 +8,13 @@ const clientSelect = {
   email: true,
   document: true,
   notes: true,
+  addressZipcode: true,
+  addressStreet: true,
+  addressNumber: true,
+  addressComplement: true,
+  addressDistrict: true,
+  addressCity: true,
+  addressState: true,
   createdAt: true,
   updatedAt: true,
   vehicles: {
@@ -31,6 +38,13 @@ interface CreateClientInput {
   email?: string;
   document?: string;
   notes?: string;
+  addressZipcode?: string;
+  addressStreet?: string;
+  addressNumber?: string;
+  addressComplement?: string;
+  addressDistrict?: string;
+  addressCity?: string;
+  addressState?: string;
 }
 
 interface UpdateClientInput {
@@ -39,6 +53,13 @@ interface UpdateClientInput {
   email?: string;
   document?: string;
   notes?: string;
+  addressZipcode?: string;
+  addressStreet?: string;
+  addressNumber?: string;
+  addressComplement?: string;
+  addressDistrict?: string;
+  addressCity?: string;
+  addressState?: string;
 }
 
 interface CreateVehicleInput {
@@ -88,6 +109,13 @@ export async function create(input: CreateClientInput) {
         email: input.email ?? null,
         document: input.document ?? null,
         notes: input.notes ?? null,
+        addressZipcode: input.addressZipcode ?? null,
+        addressStreet: input.addressStreet ?? null,
+        addressNumber: input.addressNumber ?? null,
+        addressComplement: input.addressComplement ?? null,
+        addressDistrict: input.addressDistrict ?? null,
+        addressCity: input.addressCity ?? null,
+        addressState: input.addressState ?? null,
       },
       select: clientSelect,
     });
@@ -106,6 +134,13 @@ export async function update(id: string, storeId: string, data: UpdateClientInpu
         ...(data.email !== undefined && { email: data.email }),
         ...(data.document !== undefined && { document: data.document }),
         ...(data.notes !== undefined && { notes: data.notes }),
+        ...(data.addressZipcode !== undefined && { addressZipcode: data.addressZipcode }),
+        ...(data.addressStreet !== undefined && { addressStreet: data.addressStreet }),
+        ...(data.addressNumber !== undefined && { addressNumber: data.addressNumber }),
+        ...(data.addressComplement !== undefined && { addressComplement: data.addressComplement }),
+        ...(data.addressDistrict !== undefined && { addressDistrict: data.addressDistrict }),
+        ...(data.addressCity !== undefined && { addressCity: data.addressCity }),
+        ...(data.addressState !== undefined && { addressState: data.addressState }),
       },
       select: clientSelect,
     });

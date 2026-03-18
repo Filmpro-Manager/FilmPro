@@ -14,7 +14,6 @@ import { User } from "@/types";
 import {
   ShieldCheck,
   UserPlus,
-  Pencil,
   Lock,
   Unlock,
   Users,
@@ -24,6 +23,8 @@ import {
 } from "lucide-react";
 import { UserFormDialog } from "@/components/admin/user-form-dialog";
 import { useUsersStore } from "@/store/users-store";
+import { useAuthStore } from "@/store/auth-store";
+import { apiDeleteUser, apiUpdateUser } from "@/lib/api";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 
 function getInitials(name: string) {
@@ -60,10 +61,11 @@ export default function AdminPage() {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [formOpen, setFormOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
   const users = useUsersStore((s) => s.users);
   const deleteUser = useUsersStore((s) => s.deleteUser);
+  const updateUser = useUsersStore((s) => s.updateUser);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const { token } = useAuthStore();
 
   // Role guard — redirect non-owners
   useEffect(() => {
@@ -103,13 +105,7 @@ export default function AdminPage() {
     active: users.filter((u) => u.active).length,
   };
 
-  const handleEdit = (u: User) => {
-    setEditingUser(u);
-    setFormOpen(true);
-  };
-
   const handleNew = () => {
-    setEditingUser(null);
     setFormOpen(true);
   };
 
@@ -278,18 +274,13 @@ export default function AdminPage() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8"
-                              onClick={() => handleEdit(u)}
-                              title="Editar usuário"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              title={
-                                u.active ? "Desativar usuário" : "Ativar usuário"
-                              }
+                              title={u.active ? "Desativar usuário" : "Ativar usuário"}
+                              onClick={async () => {
+                                if (!token) return;
+                                const newStatus = u.active ? "inactive" : "active";
+                                await apiUpdateUser(u.id, { status: newStatus }, token).catch(() => {});
+                                updateUser({ ...u, active: !u.active });
+                              }}
                             >
                               {u.active ? (
                                 <Lock className="w-3.5 h-3.5 text-yellow-600" />
@@ -321,14 +312,18 @@ export default function AdminPage() {
       <UserFormDialog
         open={formOpen}
         onOpenChange={setFormOpen}
-        userData={editingUser}
       />
       <ConfirmDeleteDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
         itemName={deleteTarget?.name ?? ""}
         itemType="usuário"
-        onConfirm={() => { if (deleteTarget) deleteUser(deleteTarget.id); }}
+        onConfirm={async () => {
+          if (deleteTarget && token) {
+            await apiDeleteUser(deleteTarget.id, token).catch(() => {});
+            deleteUser(deleteTarget.id);
+          }
+        }}
       />
     </div>
   );

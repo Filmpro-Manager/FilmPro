@@ -63,6 +63,9 @@ model Store {
   serviceCatalog     ServiceCatalog[]
   quotes             Quote[]
   serviceOrders      ServiceOrder[]
+  transactions       Transaction[]
+  goals              Goal[]
+  clientRatings      ClientRating[]
 
   @@map("stores")
 }
@@ -113,6 +116,15 @@ model Client {
   email     String?
   document  String?  // CPF ou CNPJ
   notes     String?
+
+  // Endereço
+  addressZipcode    String?  @map("address_zipcode")
+  addressStreet     String?  @map("address_street")
+  addressNumber     String?  @map("address_number")
+  addressComplement String?  @map("address_complement")
+  addressDistrict   String?  @map("address_district")
+  addressCity       String?  @map("address_city")
+  addressState      String?  @map("address_state")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt       @map("updated_at")
@@ -375,5 +387,88 @@ model ServiceOrder {
   updatedAt DateTime @updatedAt      @map("updated_at")
 
   @@map("service_orders")
+}
+
+// ─────────────────────────────────────────
+// TRANSACTIONS (Financeiro)
+// ─────────────────────────────────────────
+model Transaction {
+  id          String  @id @default(uuid())
+  storeId     String  @map("store_id")
+  store       Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  // income | expense
+  type        String
+  description String
+  amount      Float
+  date        String    // data de competência (YYYY-MM-DD)
+  dueDate     String?   @map("due_date")
+  paidDate    String?   @map("paid_date")
+  isPaid      Boolean   @default(true) @map("is_paid")
+  category    String
+  costCenter  String?   @map("cost_center")
+  paymentMethod String? @map("payment_method")
+
+  isRecurring   Boolean @default(false) @map("is_recurring")
+  recurrenceDay Int?    @map("recurrence_day")
+  installments  Int?
+  installmentNum Int?   @map("installment_num")
+  installmentRef String? @map("installment_ref")
+
+  clientId      String? @map("client_id")
+  clientName    String? @map("client_name")
+  appointmentId String? @map("appointment_id")
+  invoiceId     String? @map("invoice_id")
+
+  createdById   String? @map("created_by_id")
+  createdByName String? @map("created_by_name")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  @@map("transactions")
+}
+
+// ─────────────────────────────────────────
+// GOALS (Metas)
+// ─────────────────────────────────────────
+model Goal {
+  id           String  @id @default(uuid())
+  storeId      String  @map("store_id")
+  store        Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  employeeId   String? @map("employee_id")
+  employeeName String? @map("employee_name")
+
+  // revenue | services | new_clients | ticket_average | conversion_rate
+  type         String
+  period       String  // YYYY-MM
+  target       Float
+  achieved     Float   @default(0)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  @@map("goals")
+}
+
+// ─────────────────────────────────────────
+// CLIENT RATINGS (Avaliações / NPS)
+// ─────────────────────────────────────────
+model ClientRating {
+  id            String  @id @default(uuid())
+  storeId       String  @map("store_id")
+  store         Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  appointmentId String? @map("appointment_id")
+  clientId      String? @map("client_id")
+  clientName    String? @map("client_name")
+
+  score         Int     // 0-10 (NPS)
+  comment       String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("client_ratings")
 }
 

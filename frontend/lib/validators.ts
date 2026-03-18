@@ -52,25 +52,49 @@ export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export const clientSchema = z.object({
   name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres"),
   phone: z.string().min(10, "Telefone inválido"),
-  birthDate: z.string().optional(),  // para disparo de aniversário
+  birthDate: z.string().optional(),
   notes: z.string().optional(),
   // documento
   documentType: z.enum(["none", "cpf", "cnpj"], { error: "Selecione o tipo de documento" }),
   document: z.string().optional(),
-  // endereço
-  addressZipCode: z.string().min(9, "CEP inválido"),
-  addressStreet: z.string().min(1, "Rua obrigatória"),
-  addressNumber: z.string().min(1, "Número obrigatório"),
+  // endereço (todos opcionais — mas se CEP for preenchido, os demais se tornam obrigatórios)
+  addressZipCode: z.string().optional(),
+  addressStreet: z.string().optional(),
+  addressNumber: z.string().optional(),
   addressComplement: z.string().optional(),
-  addressNeighborhood: z.string().min(1, "Bairro obrigatório"),
-  addressCity: z.string().min(1, "Cidade obrigatória"),
-  addressState: z.string().min(2, "Estado obrigatório"),
-  // veículo (todos opcionais)
+  addressNeighborhood: z.string().optional(),
+  addressCity: z.string().optional(),
+  addressState: z.string().optional(),
+  // veículo (marca e modelo obrigatórios quando informados; placa, ano e cor opcionais)
   vehicleBrand: z.string().optional(),
   vehicleModel: z.string().optional(),
   vehiclePlate: z.string().optional(),
   vehicleColor: z.string().optional(),
   vehicleYear: z.number().optional(),
+}).superRefine((data, ctx) => {
+  // Se CEP foi preenchido, os demais campos de endereço são obrigatórios
+  const hasCep = data.addressZipCode && data.addressZipCode.replace(/\D/g, "").length === 8;
+  if (hasCep) {
+    if (!data.addressStreet?.trim())
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Rua obrigatória", path: ["addressStreet"] });
+    if (!data.addressNumber?.trim())
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Número obrigatório", path: ["addressNumber"] });
+    if (!data.addressNeighborhood?.trim())
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Bairro obrigatório", path: ["addressNeighborhood"] });
+    if (!data.addressCity?.trim())
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Cidade obrigatória", path: ["addressCity"] });
+    if (!data.addressState || data.addressState.length < 2)
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Estado obrigatório", path: ["addressState"] });
+  }
+
+  // Se qualquer campo do veículo foi preenchido, marca e modelo são obrigatórios
+  const hasAnyVehicleField = data.vehicleBrand || data.vehicleModel || data.vehiclePlate;
+  if (hasAnyVehicleField) {
+    if (!data.vehicleBrand)
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Marca obrigatória", path: ["vehicleBrand"] });
+    if (!data.vehicleModel)
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Modelo obrigatório", path: ["vehicleModel"] });
+  }
 });
 
 export const productSchema = z.object({

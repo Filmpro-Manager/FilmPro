@@ -1,14 +1,13 @@
 import { create } from "zustand";
 import type { Goal } from "@/types";
-import { mockGoals } from "@/data/mock";
 
 interface GoalsState {
   goals: Goal[];
+  setGoals: (goals: Goal[]) => void;
   addGoal: (goal: Goal) => void;
   updateGoal: (goal: Goal) => void;
   updateAchieved: (id: string, achieved: number) => void;
   deleteGoal: (id: string) => void;
-  /** Recalcula achieved de todas as metas do período com base em transações/serviços */
   syncAchieved: (
     period: string,
     data: {
@@ -22,7 +21,9 @@ interface GoalsState {
 }
 
 export const useGoalsStore = create<GoalsState>((set) => ({
-  goals: [...mockGoals],
+  goals: [],
+
+  setGoals: (goals) => set({ goals }),
 
   addGoal: (goal) =>
     set((state) => ({ goals: [goal, ...state.goals] })),
@@ -47,7 +48,7 @@ export const useGoalsStore = create<GoalsState>((set) => ({
   syncAchieved: (period, data) =>
     set((state) => ({
       goals: state.goals.map((g) => {
-        if (g.period !== period || g.employeeId) return g; // só metas da empresa
+        if (g.period !== period || g.employeeId) return g;
         let achieved = g.achieved;
         switch (g.type) {
           case "revenue":        achieved = data.revenue; break;

@@ -21,6 +21,18 @@
   --input: 220 15% 88%;
   --ring: 221 83% 53%;
   --radius: 0.625rem;
+
+  /* Sidebar — light */
+  --sidebar-bg: 220 20% 96%;
+  --sidebar-border: 220 15% 87%;
+  --sidebar-text: 220 12% 45%;
+  --sidebar-text-hover: 220 20% 15%;
+  --sidebar-item-hover: 220 15% 91%;
+  --sidebar-toggle-bg: 0 0% 100%;
+  --sidebar-toggle-border: 220 15% 83%;
+  --sidebar-toggle-text: 220 12% 50%;
+  --sidebar-group-label: 220 12% 52%;
+  --sidebar-divider: 220 15% 87%;
 }
 
 .dark {
@@ -43,6 +55,18 @@
   --border: 220 20% 20%;
   --input: 220 20% 18%;
   --ring: 221 83% 58%;
+
+  /* Sidebar — dark */
+  --sidebar-bg: 222 30% 7%;
+  --sidebar-border: 222 25% 13%;
+  --sidebar-text: 222 15% 50%;
+  --sidebar-text-hover: 222 15% 78%;
+  --sidebar-item-hover: 222 25% 12%;
+  --sidebar-toggle-bg: 222 30% 10%;
+  --sidebar-toggle-border: 222 25% 22%;
+  --sidebar-toggle-text: 222 15% 42%;
+  --sidebar-group-label: 222 15% 35%;
+  --sidebar-divider: 222 25% 13%;
 }
 
 @theme inline {
@@ -83,6 +107,7 @@ body {
   font-feature-settings: "rlig" 1, "calt" 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* ── Animações de entrada ───────────────────────────── */

@@ -71,6 +71,15 @@ export function ClientFormDialog({ open, onOpenChange }: ClientFormDialogProps) 
       document: api.document ?? undefined,
       documentType: docType && docType !== "none" ? docType as "cpf" | "cnpj" : undefined,
       notes: api.notes ?? undefined,
+      address: (api.addressStreet && api.addressCity) ? {
+        zipCode:      api.addressZipcode      ?? "",
+        street:       api.addressStreet       ?? "",
+        number:       api.addressNumber       ?? "",
+        complement:   api.addressComplement   ?? undefined,
+        neighborhood: api.addressDistrict     ?? "",
+        city:         api.addressCity         ?? "",
+        state:        api.addressState        ?? "",
+      } : undefined,
       vehicles: api.vehicles.map((v) => ({ id: v.id, brand: v.brand, model: v.model, year: v.year ?? undefined, plate: v.plate ?? "", color: v.color ?? undefined })),
       vehicle: first ? { id: first.id, brand: first.brand, model: first.model, year: first.year ?? undefined, plate: first.plate ?? "", color: first.color ?? undefined } : undefined,
       serviceHistory: [] as [],
@@ -118,6 +127,13 @@ export function ClientFormDialog({ open, onOpenChange }: ClientFormDialogProps) 
         phone: data.phone || undefined,
         document: data.documentType !== "none" ? data.document : undefined,
         notes: data.notes || undefined,
+        addressZipcode:    data.addressZipCode     || undefined,
+        addressStreet:     data.addressStreet      || undefined,
+        addressNumber:     data.addressNumber      || undefined,
+        addressComplement: data.addressComplement  || undefined,
+        addressDistrict:   data.addressNeighborhood || undefined,
+        addressCity:       data.addressCity        || undefined,
+        addressState:      data.addressState       || undefined,
       }, token);
 
       if (hasVehicle) {
@@ -277,7 +293,7 @@ export function ClientFormDialog({ open, onOpenChange }: ClientFormDialogProps) 
               <Input id="addressStreet" placeholder="Rua das Flores" {...register("addressStreet")} />
             </FormField>
 
-            <FormField label="Número" htmlFor="addressNumber">
+            <FormField label="Número" htmlFor="addressNumber" error={errors.addressNumber?.message}>
               <Input id="addressNumber" placeholder="123" {...register("addressNumber")} />
             </FormField>
 
@@ -316,7 +332,7 @@ export function ClientFormDialog({ open, onOpenChange }: ClientFormDialogProps) 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
               {/* Marca */}
-              <FormField label="Marca" htmlFor="vehicleBrand">
+              <FormField label="Marca" htmlFor="vehicleBrand" required error={errors.vehicleBrand?.message}>
                 <Select
                   value={selectedBrand}
                   onValueChange={(v) => {
@@ -336,7 +352,7 @@ export function ClientFormDialog({ open, onOpenChange }: ClientFormDialogProps) 
               </FormField>
 
               {/* Modelo */}
-              <FormField label="Modelo" htmlFor="vehicleModel">
+              <FormField label="Modelo" htmlFor="vehicleModel" required error={errors.vehicleModel?.message}>
                 <Select
                   value={watch("vehicleModel") ?? ""}
                   onValueChange={(v) => setValue("vehicleModel", v, { shouldValidate: true })}

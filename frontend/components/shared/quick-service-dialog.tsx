@@ -211,11 +211,17 @@ export function QuickServiceDialog({ open, onOpenChange }: QuickServiceDialogPro
                       <SelectValue placeholder="Selecione um cliente" />
                     </SelectTrigger>
                     <SelectContent>
-                      {clients.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}{c.vehicle ? ` — ${c.vehicle.plate}` : ""}
-                        </SelectItem>
-                      ))}
+                      {clients.length === 0 ? (
+                        <div className="py-6 text-center text-sm text-muted-foreground">
+                          Nenhum cliente cadastrado
+                        </div>
+                      ) : (
+                        clients.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}{c.vehicle ? ` — ${c.vehicle.plate}` : ""}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 )}
@@ -263,16 +269,22 @@ export function QuickServiceDialog({ open, onOpenChange }: QuickServiceDialogPro
                       <SelectValue placeholder="Selecione o tipo de serviço" />
                     </SelectTrigger>
                     <SelectContent>
-                      {catalogServices.map((svc) => (
-                        <SelectItem key={svc.id} value={svc.name}>
-                          <span className="flex items-center justify-between w-full gap-4">
-                            <span>{svc.name}</span>
-                            <span className="text-xs text-muted-foreground tabular-nums">
-                              {svc.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      {catalogServices.length === 0 ? (
+                        <div className="py-6 text-center text-sm text-muted-foreground">
+                          Nenhum serviço no catálogo
+                        </div>
+                      ) : (
+                        catalogServices.map((svc) => (
+                          <SelectItem key={svc.id} value={svc.name}>
+                            <span className="flex items-center justify-between w-full gap-4">
+                              <span>{svc.name}</span>
+                              <span className="text-xs text-muted-foreground tabular-nums">
+                                {svc.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                              </span>
                             </span>
-                          </span>
-                        </SelectItem>
-                      ))}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 )}
@@ -290,11 +302,17 @@ export function QuickServiceDialog({ open, onOpenChange }: QuickServiceDialogPro
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
-                      {activeEmployees.map((e) => (
-                        <SelectItem key={e.id} value={e.id}>
-                          {e.name}
-                        </SelectItem>
-                      ))}
+                      {activeEmployees.length === 0 ? (
+                        <div className="py-6 text-center text-sm text-muted-foreground">
+                          Nenhum colaborador ativo
+                        </div>
+                      ) : (
+                        activeEmployees.map((e) => (
+                          <SelectItem key={e.id} value={e.id}>
+                            {e.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 )}
@@ -407,14 +425,20 @@ export function QuickServiceDialog({ open, onOpenChange }: QuickServiceDialogPro
                         <SelectValue placeholder="Selecione a película" />
                       </SelectTrigger>
                       <SelectContent>
-                        {products.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.brand} {p.model}
-                            <span className="text-muted-foreground ml-1">
-                              ({p.availableMeters}m disponíveis)
-                            </span>
-                          </SelectItem>
-                        ))}
+                        {products.length === 0 ? (
+                          <div className="py-6 text-center text-sm text-muted-foreground">
+                            Nenhuma película cadastrada
+                          </div>
+                        ) : (
+                          products.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.brand} {p.model}
+                              <span className="text-muted-foreground ml-1">
+                                ({p.availableMeters}m disponíveis)
+                              </span>
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
 

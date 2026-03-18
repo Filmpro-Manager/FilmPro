@@ -24,14 +24,13 @@ import {
 import { Employee } from "@/types";
 import { useEmployeesStore } from "@/store/employees-store";
 import { useAuthStore } from "@/store/auth-store";
-import { apiCreateUser, apiUpdateUser } from "@/lib/api";
+import { apiCreateUser } from "@/lib/api";
 import { maskPhone } from "@/lib/masks";
 import { toast } from "sonner";
 
 interface EmployeeFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  employee?: Employee | null;
 }
 
 function mapApiUserToEmployee(u: {
@@ -65,10 +64,8 @@ function mapApiUserToEmployee(u: {
 export function EmployeeFormDialog({
   open,
   onOpenChange,
-  employee,
 }: EmployeeFormDialogProps) {
-  const isEditing = !!employee;
-  const { addEmployee, updateEmployee } = useEmployeesStore();
+  const { addEmployee } = useEmployeesStore();
   const { token } = useAuthStore();
 
   const {
@@ -89,18 +86,7 @@ export function EmployeeFormDialog({
   });
 
   useEffect(() => {
-    if (employee) {
-      reset({
-        name: employee.name,
-        email: employee.email,
-        phone: employee.phone ?? "",
-        role:
-          employee.userRole === "MANAGER" || (employee.userRole as string) === "manager"
-            ? "manager"
-            : "employee",
-        specialties: employee.specialties ?? [],
-      });
-    } else {
+    if (!open) {
       reset({
         name: "",
         email: "",
@@ -109,7 +95,7 @@ export function EmployeeFormDialog({
         specialties: [],
       });
     }
-  }, [employee, reset, open]);
+  }, [open, reset]);
 
   const onSubmit = async (data: EmployeeFormData) => {
     if (!token) {
@@ -118,32 +104,20 @@ export function EmployeeFormDialog({
     }
 
     try {
-      if (isEditing && employee) {
-        // Atualiza dados básicos
-        const updated = await apiUpdateUser(
-          employee.id,
-          { name: data.name, phone: data.phone ?? "", role: data.role },
-          token,
-        );
-
-        updateEmployee(mapApiUserToEmployee(updated));
-        toast.success("Usuário atualizado com sucesso!");
-      } else {
-        const created = await apiCreateUser(
-          {
-            name: data.name,
-            email: data.email,
-            phone: data.phone ?? "",
-            role: data.role,
-          },
-          token,
-        );
-        addEmployee(mapApiUserToEmployee(created));
-        toast.success("Usuário criado! As credenciais foram enviadas para o e-mail cadastrado.");
-      }
+      const created = await apiCreateUser(
+        {
+          name: data.name,
+          email: data.email,
+          phone: data.phone ?? "",
+          role: data.role,
+        },
+        token,
+      );
+      addEmployee(mapApiUserToEmployee(created));
+      toast.success("Usuário criado! As credenciais foram enviadas para o e-mail cadastrado.");
       onOpenChange(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao salvar usuário");
+      toast.error(err instanceof Error ? err.message : "Erro ao criar usuário");
     }
   };
 
@@ -152,13 +126,11 @@ export function EmployeeFormDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? "Editar Usuário" : "Novo Usuário"}
+            Novo Usuário
           </DialogTitle>
-          {!isEditing && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Uma senha temporária será gerada automaticamente e enviada para o e-mail cadastrado.
-            </p>
-          )}
+          <p className="text-xs text-muted-foreground mt-1">
+            Uma senha temporária será gerada automaticamente e enviada para o e-mail cadastrado.
+          </p>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -170,7 +142,6 @@ export function EmployeeFormDialog({
             <Input
               type="email"
               placeholder="joao@empresa.com"
-              disabled={isEditing}
               {...register("email")}
             />
           </FormField>
@@ -213,11 +184,7 @@ export function EmployeeFormDialog({
               Cancelar
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting
-                ? "Salvando..."
-                : isEditing
-                ? "Salvar Alterações"
-                : "Criar Usuário"}
+              {isSubmitting ? "Criando..." : "Criar Usuário"}
             </Button>
           </DialogFooter>
         </form>

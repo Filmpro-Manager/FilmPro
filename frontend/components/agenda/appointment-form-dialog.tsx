@@ -7,6 +7,8 @@ import { Loader2, CalendarRange, Plus, Trash2, Package, AlertCircle } from "luci
 import { appointmentSchema, type AppointmentInput } from "@/lib/validators";
 import { maskCurrency, parseCurrency } from "@/lib/masks";
 import type { Appointment, MaterialUsage } from "@/types";
+import { apiCreateServiceOrder, apiUpdateServiceOrder } from "@/lib/api";
+import { useAuthStore } from "@/store/auth-store";
 import { useServiceCatalogStore } from "@/store/service-catalog-store";
 import { useServicesStore } from "@/store/services-store";
 import { useClientsStore } from "@/store/clients-store";
@@ -51,6 +53,7 @@ export function AppointmentFormDialog({
   const [materials, setMaterials] = useState<MaterialRow[]>([]);
   const [materialErrors, setMaterialErrors] = useState<Record<string, string>>({});
 
+  const { token } = useAuthStore();
   const { addService, updateService } = useServicesStore();
   const clients = useClientsStore((s) => s.clients);
   const employees = useEmployeesStore((s) => s.employees);
@@ -175,6 +178,7 @@ export function AppointmentFormDialog({
 
   async function onSubmit(data: AppointmentInput) {
     if (!validateMaterials()) return;
+    if (!token) return;
 
     const usedMaterials: MaterialUsage[] = materials
       .filter((r) => r.productId && r.meters)
@@ -187,35 +191,62 @@ export function AppointmentFormDialog({
         };
       });
 
-    await new Promise((res) => setTimeout(res, 600));
+    const client = clients.find((c) => c.id === data.clientId);
+    const employee = employees.find((e) => e.id === data.employeeId);
+    const vehicle = client?.vehicle
+      ? `${client.vehicle.brand} ${client.vehicle.model} — ${client.vehicle.plate}`
+      : appointment?.vehicle ?? "";
+
+    const payload = {
+      clientId: data.clientId,
+      clientName: client?.name ?? appointment?.clientName ?? "",
+      vehicle,
+      serviceType: data.serviceType,
+      employeeId: data.employeeId,
+      employeeName: employee?.name ?? appointment?.employeeName ?? "",
+      date: data.date,
+      endDate: data.endDate || undefined,
+      value: data.value,
+      notes: data.notes,
+    };
+
+    if (appointment) {
+      const updated = await apiUpdateServiceOrder(appointment.id, { ...payload, status: data.status }, token);
+      updateService({
+        ...appointment,
+        ...data,
+        id: updated.id,
+        clientName: updated.clientName,
+        employeeName: updated.employeeName ?? "",
+        vehicle: updated.vehicle ?? "",
+        materialsUsed: usedMaterials,
+      });
+    } else {
+      const created = await apiCreateServiceOrder(payload, token);
+      addService({
+        id: created.id,
+        clientId: created.clientId ?? "",
+        clientName: created.clientName,
+        vehicle: created.vehicle ?? "",
+        serviceType: created.serviceType,
+        employeeId: created.employeeId ?? "",
+        employeeName: created.employeeName ?? "",
+        quoteId: created.quoteId ?? undefined,
+        date: created.date,
+        endDate: created.endDate ?? undefined,
+        startTime: created.startTime ?? undefined,
+        endTime: created.endTime ?? undefined,
+        status: created.status as Appointment["status"],
+        value: created.value,
+        notes: created.notes ?? undefined,
+        materialsUsed: usedMaterials,
+      });
+    }
 
     if (data.status === "completed" && usedMaterials.length > 0) {
       // TODO: baixa automática no estoque
     }
 
-    const client = clients.find((c) => c.id === data.clientId);
-    const employee = employees.find((e) => e.id === data.employeeId);
-    const now = new Date().toISOString();
-
-    if (appointment) {
-      updateService({
-        ...appointment,
-        ...data,
-        clientName: client?.name ?? appointment.clientName,
-        employeeName: employee?.name ?? appointment.employeeName,
-        vehicle: client?.vehicle ? `${client.vehicle.brand} ${client.vehicle.model} — ${client.vehicle.plate}` : appointment.vehicle,
-        materialsUsed: usedMaterials,
-      });
-    } else {
-      addService({
-        id: `svc-${Date.now()}`,
-        ...data,
-        clientName: client?.name ?? "",
-        employeeName: employee?.name ?? "",
-        vehicle: client?.vehicle ? `${client.vehicle.brand} ${client.vehicle.model} — ${client.vehicle.plate}` : "",
-        materialsUsed: usedMaterials,
-      });
-    }
     reset();
     onOpenChange(false);
   }
@@ -267,11 +298,17 @@ export function AppointmentFormDialog({
                       <SelectValue placeholder="Selecione um cliente" />
                     </SelectTrigger>
                     <SelectContent>
-                      {clients.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}{c.vehicle ? ` — ${c.vehicle.plate}` : ""}
-                        </SelectItem>
-                      ))}
+                      {clients.length === 0 ? (
+                        <div className="py-6 text-center text-sm text-muted-foreground">
+                          Nenhum cliente cadastrado
+                        </div>
+                      ) : (
+                        clients.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 )}
@@ -300,16 +337,22 @@ export function AppointmentFormDialog({
                       <SelectValue placeholder="Selecione o tipo de serviço" />
                     </SelectTrigger>
                     <SelectContent>
-                      {catalogServices.map((svc) => (
-                        <SelectItem key={svc.id} value={svc.name}>
-                          <span className="flex items-center justify-between w-full gap-4">
-                            <span>{svc.name}</span>
-                            <span className="text-xs text-muted-foreground tabular-nums">
-                              {svc.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      {catalogServices.length === 0 ? (
+                        <div className="py-6 text-center text-sm text-muted-foreground">
+                          Nenhum serviço no catálogo
+                        </div>
+                      ) : (
+                        catalogServices.map((svc) => (
+                          <SelectItem key={svc.id} value={svc.name}>
+                            <span className="flex items-center justify-between w-full gap-4">
+                              <span>{svc.name}</span>
+                              <span className="text-xs text-muted-foreground tabular-nums">
+                                {svc.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                              </span>
                             </span>
-                          </span>
-                        </SelectItem>
-                      ))}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 )}
@@ -327,11 +370,17 @@ export function AppointmentFormDialog({
                       <SelectValue placeholder="Selecione o responsável" />
                     </SelectTrigger>
                     <SelectContent>
-                      {activeEmployees.map((e) => (
-                        <SelectItem key={e.id} value={e.id}>
-                          {e.name} — {e.role}
-                        </SelectItem>
-                      ))}
+                      {activeEmployees.length === 0 ? (
+                        <div className="py-6 text-center text-sm text-muted-foreground">
+                          Nenhum colaborador ativo
+                        </div>
+                      ) : (
+                        activeEmployees.map((e) => (
+                          <SelectItem key={e.id} value={e.id}>
+                            {e.name} — {e.role}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 )}
@@ -427,14 +476,20 @@ export function AppointmentFormDialog({
                           <SelectValue placeholder="Selecione a película" />
                         </SelectTrigger>
                         <SelectContent>
-                          {products.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>
-                              {p.brand} {p.model}
-                              <span className="text-muted-foreground ml-1">
-                                ({p.availableMeters}m disponíveis)
-                              </span>
-                            </SelectItem>
-                          ))}
+                          {products.length === 0 ? (
+                            <div className="py-6 text-center text-sm text-muted-foreground">
+                              Nenhuma película cadastrada
+                            </div>
+                          ) : (
+                            products.map((p) => (
+                              <SelectItem key={p.id} value={p.id}>
+                                {p.brand} {p.model}
+                                <span className="text-muted-foreground ml-1">
+                                  ({p.availableMeters}m disponíveis)
+                                </span>
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
 

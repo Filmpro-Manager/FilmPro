@@ -45,15 +45,9 @@ import { toast } from "sonner";
 import {
   apiCreateQuote,
   apiUpdateQuote,
-  apiGetClients,
-  apiGetServices,
-  apiGetInventoryItems,
   type CreateQuoteData,
   type ApiQuote,
-  type ApiClient,
 } from "@/lib/api";
-import { mapApiItemToProduct } from "@/store/products-store";
-import type { ServiceCategory } from "@/types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function todayStr(): string {
@@ -127,72 +121,11 @@ export function QuoteFormDialog({
   initialQuote,
 }: QuoteFormDialogProps) {
   const { addQuote, updateQuote } = useQuotesStore();
-  const { clients, setClients } = useClientsStore();
-  const { services: catalogServices, setServices } = useServiceCatalogStore();
-  const { products, setProducts } = useProductsStore();
+  const { clients } = useClientsStore();
+  const { services: catalogServices } = useServiceCatalogStore();
+  const { products } = useProductsStore();
   const { token } = useAuthStore();
   const [submitting, setSubmitting] = useState(false);
-
-  // ─── Carregar dados dependentes ao abrir ─────────────────────────────────
-  useEffect(() => {
-    if (!open || !token) return;
-
-    function mapClient(api: ApiClient) {
-      const v = api.vehicles[0];
-      return {
-        id: api.id,
-        name: api.name,
-        phone: api.phone ?? "",
-        email: api.email ?? undefined,
-        document: api.document ?? undefined,
-        notes: api.notes ?? undefined,
-        vehicles: api.vehicles.map((vv) => ({
-          id: vv.id, brand: vv.brand, model: vv.model,
-          year: vv.year ?? undefined, plate: vv.plate ?? "", color: vv.color ?? undefined,
-        })),
-        vehicle: v ? { id: v.id, brand: v.brand, model: v.model, year: v.year ?? undefined, plate: v.plate ?? "", color: v.color ?? undefined } : undefined,
-        serviceHistory: [],
-        totalSpent: 0,
-        createdAt: api.createdAt,
-      };
-    }
-
-    const promises: Promise<void>[] = [];
-
-    if (clients.length === 0) {
-      promises.push(
-        apiGetClients(token)
-          .then((data) => setClients(data.map(mapClient)))
-          .catch(() => {})
-      );
-    }
-    if (catalogServices.length === 0) {
-      promises.push(
-        apiGetServices(token)
-          .then((data) =>
-            setServices(
-              data.map((s) => ({
-                ...s,
-                category: s.category as ServiceCategory,
-                description: s.description ?? undefined,
-                estimatedMinutes: s.estimatedMinutes ?? undefined,
-              }))
-            )
-          )
-          .catch(() => {})
-      );
-    }
-    if (products.length === 0) {
-      promises.push(
-        apiGetInventoryItems(token)
-          .then((data) => setProducts(data.map(mapApiItemToProduct)))
-          .catch(() => {})
-      );
-    }
-
-    if (promises.length > 0) Promise.all(promises);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, token]);
 
   const isEditing = !!initialQuote;
 
@@ -677,11 +610,17 @@ export function QuoteFormDialog({
                     <SelectValue placeholder="Selecione um cliente..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {clients.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
+                    {clients.length === 0 ? (
+                      <div className="py-6 text-center text-sm text-muted-foreground">
+                        Nenhum cliente cadastrado
+                      </div>
+                    ) : (
+                      clients.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
                 {errors.clientId && (

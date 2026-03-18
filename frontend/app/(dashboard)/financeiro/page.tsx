@@ -10,6 +10,8 @@ import { DataTable } from "@/components/shared/data-table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TransactionFormDialog } from "@/components/financeiro/transaction-form-dialog";
 import { useTransactionsStore } from "@/store/transactions-store";
+import { useAuthStore } from "@/store/auth-store";
+import { apiDeleteTransaction } from "@/lib/api";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Transaction, TableColumn } from "@/types";
@@ -21,6 +23,7 @@ export default function FinanceiroPage() {
   const transactions = useTransactionsStore((s) => s.transactions);
   const deleteTransaction = useTransactionsStore((s) => s.deleteTransaction);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const { token } = useAuthStore();
 
   const stats = useMemo(() => {
     const income = transactions.filter((t) => t.type === "income").reduce((acc, t) => acc + t.amount, 0);
@@ -190,7 +193,12 @@ export default function FinanceiroPage() {
         onOpenChange={(open) => !open && setDeleteTarget(null)}
         itemName={deleteTarget?.name ?? ""}
         itemType="lançamento"
-        onConfirm={() => { if (deleteTarget) deleteTransaction(deleteTarget.id); }}
+        onConfirm={async () => {
+          if (deleteTarget && token) {
+            await apiDeleteTransaction(deleteTarget.id, token).catch(() => {});
+            deleteTransaction(deleteTarget.id);
+          }
+        }}
       />
     </div>
   );

@@ -24,23 +24,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { User } from "@/types";
 import { ShieldCheck } from "lucide-react";
 import { useUsersStore } from "@/store/users-store";
 
 interface UserFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  userData?: User | null;
 }
 
 export function UserFormDialog({
   open,
   onOpenChange,
-  userData,
 }: UserFormDialogProps) {
-  const isEditing = !!userData;
-  const { addUser, updateUser } = useUsersStore();
+  const { addUser } = useUsersStore();
 
   const {
     register,
@@ -60,15 +56,7 @@ export function UserFormDialog({
   });
 
   useEffect(() => {
-    if (userData) {
-      reset({
-        name: userData.name,
-        email: userData.email,
-        role: userData.role,
-        isActive: userData.active ?? true,
-        companyId: userData.companyId ?? userData.employeeId ?? "",
-      });
-    } else {
+    if (!open) {
       reset({
         name: "",
         email: "",
@@ -77,30 +65,19 @@ export function UserFormDialog({
         companyId: "",
       });
     }
-  }, [userData, reset, open]);
+  }, [open, reset]);
 
   const onSubmit = async (data: UserFormData) => {
     const now = new Date().toISOString();
-    if (userData) {
-      updateUser({
-        ...userData,
-        name: data.name,
-        email: data.email,
-        role: data.role,
-        active: data.isActive,
-        companyId: data.companyId || undefined,
-      });
-    } else {
-      addUser({
-        id: `usr-${Date.now()}`,
-        name: data.name,
-        email: data.email,
-        role: data.role,
-        active: data.isActive,
-        companyId: data.companyId || undefined,
-        createdAt: now,
-      });
-    }
+    addUser({
+      id: `usr-${Date.now()}`,
+      name: data.name,
+      email: data.email,
+      role: data.role,
+      active: data.isActive,
+      companyId: data.companyId || undefined,
+      createdAt: now,
+    });
     onOpenChange(false);
   };
 
@@ -110,12 +87,10 @@ export function UserFormDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-primary" />
-            {isEditing ? "Editar Usuário" : "Novo Usuário"}
+            Novo Usuário
           </DialogTitle>
           <DialogDescription>
-            {isEditing
-              ? "Modifique os dados e permissões do usuário."
-              : "Preencha os dados para criar um novo usuário no sistema."}
+            Preencha os dados para criar um novo usuário no sistema.
           </DialogDescription>
         </DialogHeader>
 
@@ -136,21 +111,23 @@ export function UserFormDialog({
             />
           </FormField>
 
-          {!isEditing && (
-            <FormField
-              label="Senha Inicial"
-              error={errors.password?.message}
-              required
-            >
-              <Input
-                type="password"
-                placeholder="Mínimo 6 caracteres"
-                {...register("password")}
-              />
-            </FormField>
-          )}
+          <FormField
+            label="Senha Inicial"
+            error={errors.password?.message}
+            required
+          >
+            <Input
+              type="password"
+              placeholder="Mínimo 6 caracteres"
+              {...register("password")}
+            />
+          </FormField>
 
-          <FormField label="Perfil de Acesso" error={errors.role?.message} required>
+          <FormField
+            label="Perfil de Acesso"
+            error={errors.role?.message}
+            required
+          >
             <Controller
               name="role"
               control={control}
@@ -204,11 +181,7 @@ export function UserFormDialog({
               Cancelar
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting
-                ? "Salvando..."
-                : isEditing
-                ? "Salvar Alterações"
-                : "Criar Usuário"}
+              {isSubmitting ? "Salvando..." : "Criar Usuário"}
             </Button>
           </DialogFooter>
         </form>

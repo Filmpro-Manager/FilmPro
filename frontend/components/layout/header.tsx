@@ -76,16 +76,6 @@ export function Header({ onMenuToggle, className }: HeaderProps) {
           Lançamento Rápido
         </Button>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          aria-label="Alternar tema"
-        >
-          <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-        </Button>
-
         <Button variant="ghost" size="icon" aria-label="Notificações">
           <Bell className="h-4 w-4" />
         </Button>
@@ -136,6 +126,22 @@ export function Header({ onMenuToggle, className }: HeaderProps) {
             >
               <UserIcon className="mr-2 h-4 w-4" />
               Meu Perfil
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="cursor-pointer"
+            >
+              {theme === "dark" ? (
+                <>
+                  <Sun className="mr-2 h-4 w-4" />
+                  Modo Claro
+                </>
+              ) : (
+                <>
+                  <Moon className="mr-2 h-4 w-4" />
+                  Modo Escuro
+                </>
+              )}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem

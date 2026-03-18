@@ -114,8 +114,8 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
       className={cn(
         // Base
         "flex flex-col h-full shrink-0 border-r",
-        "bg-[hsl(222,30%,7%)] border-[hsl(222,25%,13%)]",
-        "transition-transform duration-300 ease-in-out",
+        "bg-[hsl(var(--sidebar-bg))] border-[hsl(var(--sidebar-border))]",
+        "transition-[transform,background-color,border-color] duration-300 ease-in-out",
         // Mobile: fixed overlay, slide from left
         "fixed inset-y-0 left-0 z-40",
         mobileOpen ? "translate-x-0" : "-translate-x-full",
@@ -128,7 +128,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
       {/* ── Logo / Empresa ────────────────────────────────────────── */}
       <div
         className={cn(
-          "flex items-center h-14 shrink-0 border-b border-[hsl(222,25%,13%)]",
+          "flex items-center h-14 shrink-0 border-b border-[hsl(var(--sidebar-border))]",
           collapsed ? "justify-center px-0" : "px-3 gap-3"
         )}
       >
@@ -142,10 +142,10 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
 
         {!collapsed && (
           <div className="min-w-0 animate-fade-in">
-            <p className="text-[13px] font-semibold text-white leading-tight truncate tracking-tight">
+            <p className="text-[13px] font-semibold text-foreground leading-tight truncate tracking-tight">
               {companyName}
             </p>
-            <p className="text-[10px] text-[hsl(222,15%,38%)] leading-tight truncate mt-0.5">
+            <p className="text-[10px] text-[hsl(var(--sidebar-group-label))] leading-tight truncate mt-0.5">
               FilmPro Manager
             </p>
           </div>
@@ -162,11 +162,11 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
             <div key={gi}>
               {/* Separador e label do grupo */}
               {!collapsed ? (
-                <p className="px-2 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-[hsl(222,15%,35%)] select-none">
+                <p className="px-2 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-[hsl(var(--sidebar-group-label))] select-none">
                   {group.label}
                 </p>
               ) : (
-                gi > 0 && <div className="h-px bg-[hsl(222,25%,13%)] mx-1 mb-2" />
+                gi > 0 && <div className="h-px bg-[hsl(var(--sidebar-divider))] mx-1 mb-2" />
               )}
 
               <div className="space-y-0.5">
@@ -187,7 +187,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
                           : "h-8 gap-2.5 pl-3 pr-2",
                         active
                           ? "bg-primary/10 text-primary font-medium"
-                          : "text-[hsl(222,15%,50%)] hover:bg-[hsl(222,25%,12%)] hover:text-[hsl(222,15%,78%)]"
+                          : "text-[hsl(var(--sidebar-text))] hover:bg-[hsl(var(--sidebar-item-hover))] hover:text-[hsl(var(--sidebar-text-hover))]" 
                       )}
                     >
                       {/* Barra lateral ativa */}
@@ -227,9 +227,9 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
           "hidden lg:flex",
           "absolute -right-3 top-[calc(50%-12px)] z-20",
           "items-center justify-center w-6 h-6 rounded-full cursor-pointer",
-          "bg-[hsl(222,30%,10%)] border border-[hsl(222,25%,22%)]",
-          "text-[hsl(222,15%,42%)] shadow-sm",
-          "hover:border-primary/40 hover:text-primary hover:bg-[hsl(222,30%,13%)]",
+          "bg-[hsl(var(--sidebar-toggle-bg))] border border-[hsl(var(--sidebar-toggle-border))]",
+          "text-[hsl(var(--sidebar-toggle-text))] shadow-sm",
+          "hover:border-primary/40 hover:text-primary",
           "transition-all duration-200"
         )}
       >

@@ -31,6 +31,15 @@ function mapApiClient(api: ApiClient): Client {
     email: api.email ?? undefined,
     document: api.document ?? undefined,
     notes: api.notes ?? undefined,
+    address: (api.addressStreet && api.addressCity) ? {
+      zipCode:      api.addressZipcode      ?? "",
+      street:       api.addressStreet       ?? "",
+      number:       api.addressNumber       ?? "",
+      complement:   api.addressComplement   ?? undefined,
+      neighborhood: api.addressDistrict     ?? "",
+      city:         api.addressCity         ?? "",
+      state:        api.addressState        ?? "",
+    } : undefined,
     vehicles: api.vehicles.map((v) => ({
       id: v.id,
       brand: v.brand,

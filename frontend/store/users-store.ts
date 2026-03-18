@@ -1,16 +1,18 @@
 import { create } from "zustand";
 import type { User } from "@/types";
-import { mockUsers } from "@/data/mock";
 
 interface UsersState {
   users: User[];
+  setUsers: (users: User[]) => void;
   addUser: (user: User) => void;
   updateUser: (user: User) => void;
   deleteUser: (id: string) => void;
 }
 
 export const useUsersStore = create<UsersState>((set) => ({
-  users: [...mockUsers],
+  users: [],
+
+  setUsers: (users) => set({ users }),
 
   addUser: (user) =>
     set((state) => ({ users: [user, ...state.users] })),

@@ -38,8 +38,8 @@ function mapApiServiceOrder(api: ApiServiceOrder): Appointment {
 }
 
 export default function AgendaPage() {
-  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 1));
-  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date(2026, 1, 24));
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [openForm, setOpenForm] = useState(false);
   const [editAppt, setEditAppt] = useState<Appointment | null>(null);
   const appointments = useServicesStore((s) => s.services);

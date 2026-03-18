@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import type { Alert, AlertType, AlertSeverity } from "@/types";
-import { mockAlerts } from "@/data/mock";
 
 interface AlertsState {
   alerts: Alert[];
@@ -19,8 +18,8 @@ interface AlertsState {
 }
 
 export const useAlertsStore = create<AlertsState>((set, get) => ({
-  alerts: [...mockAlerts],
-  unreadCount: mockAlerts.filter((a) => !a.isRead).length,
+  alerts: [],
+  unreadCount: 0,
 
   addAlert: (alert) =>
     set((state) => ({

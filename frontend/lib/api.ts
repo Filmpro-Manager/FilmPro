@@ -155,6 +155,13 @@ export interface ApiClient {
   email: string | null;
   document: string | null;
   notes: string | null;
+  addressZipcode: string | null;
+  addressStreet: string | null;
+  addressNumber: string | null;
+  addressComplement: string | null;
+  addressDistrict: string | null;
+  addressCity: string | null;
+  addressState: string | null;
   createdAt: string;
   updatedAt: string;
   vehicles: ApiVehicle[];
@@ -166,6 +173,13 @@ export interface CreateClientData {
   email?: string;
   document?: string;
   notes?: string;
+  addressZipcode?: string;
+  addressStreet?: string;
+  addressNumber?: string;
+  addressComplement?: string;
+  addressDistrict?: string;
+  addressCity?: string;
+  addressState?: string;
 }
 
 export interface CreateVehicleData {
@@ -839,6 +853,21 @@ export async function apiCreateServiceOrder(
   return json as ApiServiceOrder;
 }
 
+export async function apiUpdateServiceOrder(
+  id: string,
+  data: Partial<CreateServiceOrderData> & { status?: string },
+  token: string,
+): Promise<ApiServiceOrder> {
+  const res = await fetch(`${BASE_URL}/service-orders/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Erro ao atualizar ordem de serviço');
+  return json as ApiServiceOrder;
+}
+
 export async function apiUpdateServiceOrderStatus(
   id: string,
   status: string,
@@ -864,4 +893,197 @@ export async function apiDeleteServiceOrder(id: string, token: string): Promise<
     throw new Error(json.message ?? 'Erro ao excluir ordem de serviço');
   }
 }
+
+// ─── Transactions ────────────────────────────────────────────────────────────
+
+export interface ApiTransaction {
+  id: string;
+  storeId: string;
+  type: string;
+  description: string;
+  amount: number;
+  date: string;
+  dueDate: string | null;
+  paidDate: string | null;
+  isPaid: boolean;
+  category: string;
+  costCenter: string | null;
+  paymentMethod: string | null;
+  isRecurring: boolean;
+  recurrenceDay: number | null;
+  installments: number | null;
+  installmentNum: number | null;
+  installmentRef: string | null;
+  clientId: string | null;
+  clientName: string | null;
+  appointmentId: string | null;
+  invoiceId: string | null;
+  createdById: string | null;
+  createdByName: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateTransactionData {
+  type: string;
+  description: string;
+  amount: number;
+  date: string;
+  dueDate?: string;
+  isPaid?: boolean;
+  category: string;
+  paymentMethod?: string;
+  clientId?: string;
+  clientName?: string;
+  appointmentId?: string;
+}
+
+export async function apiGetTransactions(token: string): Promise<ApiTransaction[]> {
+  const res = await fetch(`${BASE_URL}/transactions`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Erro ao buscar transações');
+  return data as ApiTransaction[];
+}
+
+export async function apiCreateTransaction(data: CreateTransactionData, token: string): Promise<ApiTransaction> {
+  const res = await fetch(`${BASE_URL}/transactions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Erro ao criar transação');
+  return json as ApiTransaction;
+}
+
+export async function apiDeleteTransaction(id: string, token: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/transactions/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.message ?? 'Erro ao excluir transação');
+  }
+}
+
+// ─── Goals ───────────────────────────────────────────────────────────────────
+
+export interface ApiGoal {
+  id: string;
+  storeId: string;
+  employeeId: string | null;
+  employeeName: string | null;
+  type: string;
+  period: string;
+  target: number;
+  achieved: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateGoalData {
+  employeeId?: string;
+  employeeName?: string;
+  type: string;
+  period: string;
+  target: number;
+}
+
+export async function apiGetGoals(token: string): Promise<ApiGoal[]> {
+  const res = await fetch(`${BASE_URL}/goals`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Erro ao buscar metas');
+  return data as ApiGoal[];
+}
+
+export async function apiCreateGoal(data: CreateGoalData, token: string): Promise<ApiGoal> {
+  const res = await fetch(`${BASE_URL}/goals`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Erro ao criar meta');
+  return json as ApiGoal;
+}
+
+export async function apiUpdateGoal(id: string, data: Partial<CreateGoalData> & { achieved?: number }, token: string): Promise<ApiGoal> {
+  const res = await fetch(`${BASE_URL}/goals/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Erro ao atualizar meta');
+  return json as ApiGoal;
+}
+
+export async function apiDeleteGoal(id: string, token: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/goals/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.message ?? 'Erro ao excluir meta');
+  }
+}
+
+// ─── Ratings ─────────────────────────────────────────────────────────────────
+
+export interface ApiRating {
+  id: string;
+  storeId: string;
+  appointmentId: string | null;
+  clientId: string | null;
+  clientName: string | null;
+  score: number;
+  comment: string | null;
+  createdAt: string;
+}
+
+export interface CreateRatingData {
+  appointmentId?: string;
+  clientId?: string;
+  clientName?: string;
+  score: number;
+  comment?: string;
+}
+
+export async function apiGetRatings(token: string): Promise<ApiRating[]> {
+  const res = await fetch(`${BASE_URL}/ratings`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Erro ao buscar avaliações');
+  return data as ApiRating[];
+}
+
+export async function apiCreateRating(data: CreateRatingData, token: string): Promise<ApiRating> {
+  const res = await fetch(`${BASE_URL}/ratings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Erro ao registrar avaliação');
+  return json as ApiRating;
+}
+
+export async function apiDeleteRating(id: string, token: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/ratings/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.message ?? 'Erro ao excluir avaliação');
+  }
+}
+
 

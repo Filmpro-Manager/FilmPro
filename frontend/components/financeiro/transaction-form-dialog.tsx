@@ -13,6 +13,8 @@ import {
 import { FormField } from "@/components/shared/form-field";
 import { useTransactionsStore } from "@/store/transactions-store";
 import { useClientsStore } from "@/store/clients-store";
+import { useAuthStore } from "@/store/auth-store";
+import { apiCreateTransaction } from "@/lib/api";
 import { maskCurrency, parseCurrency } from "@/lib/masks";
 
 interface TransactionFormDialogProps {
@@ -39,6 +41,7 @@ export function TransactionFormDialog({ open, onOpenChange }: TransactionFormDia
 
   const { addTransaction } = useTransactionsStore();
   const clients = useClientsStore((s) => s.clients);
+  const { token } = useAuthStore();
 
   function reset() {
     setDescription("");
@@ -53,23 +56,38 @@ export function TransactionFormDialog({ open, onOpenChange }: TransactionFormDia
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const amount = parseCurrency(amountDisplay);
-    if (!amount || !description || !date || !category) return;
+    if (!amount || !description || !date || !category || !token) return;
     setLoading(true);
-    const client = clientId ? clients.find((c) => c.id === clientId) : undefined;
-    addTransaction({
-      id: `tx-${Date.now()}`,
-      type,
-      description,
-      amount,
-      date,
-      category,
-      paymentMethod: paymentMethod || undefined,
-      clientId: client?.id,
-      clientName: client?.name,
-    });
-    setLoading(false);
-    reset();
-    onOpenChange(false);
+    try {
+      const client = clientId ? clients.find((c) => c.id === clientId) : undefined;
+      const created = await apiCreateTransaction({
+        type,
+        description,
+        amount,
+        date,
+        category,
+        paymentMethod: paymentMethod || undefined,
+        clientId: client?.id,
+        clientName: client?.name,
+      }, token);
+      addTransaction({
+        id: created.id,
+        type: created.type as "income" | "expense",
+        description: created.description,
+        amount: created.amount,
+        date: created.date,
+        dueDate: created.dueDate ?? undefined,
+        isPaid: created.isPaid,
+        category: created.category,
+        paymentMethod: created.paymentMethod ?? undefined,
+        clientId: created.clientId ?? undefined,
+        clientName: created.clientName ?? undefined,
+      });
+      reset();
+      onOpenChange(false);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

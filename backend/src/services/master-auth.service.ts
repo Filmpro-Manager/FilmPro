@@ -15,6 +15,7 @@ export async function masterLogin(email: string, password: string) {
 
   const token = generateToken({
     id: master.id,
+    name: 'Master',
     email: master.email,
     role: 'master',
     companyId: null,

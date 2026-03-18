@@ -1,15 +1,5 @@
 import { create } from "zustand";
 import type { ClientRating } from "@/types";
-import { mockRatings } from "@/data/mock";
-
-interface RatingsState {
-  ratings: ClientRating[];
-  /** NPS calculado: % promotores (9-10) - % detratores (0-6) */
-  npsScore: number;
-  addRating: (rating: ClientRating) => void;
-  getByClient: (clientId: string) => ClientRating[];
-  getByAppointment: (appointmentId: string) => ClientRating | undefined;
-}
 
 function calcNPS(ratings: ClientRating[]): number {
   if (ratings.length === 0) return 0;
@@ -18,9 +8,20 @@ function calcNPS(ratings: ClientRating[]): number {
   return Math.round(((promoters - detractors) / ratings.length) * 100);
 }
 
+interface RatingsState {
+  ratings: ClientRating[];
+  npsScore: number;
+  setRatings: (ratings: ClientRating[]) => void;
+  addRating: (rating: ClientRating) => void;
+  getByClient: (clientId: string) => ClientRating[];
+  getByAppointment: (appointmentId: string) => ClientRating | undefined;
+}
+
 export const useRatingsStore = create<RatingsState>((set, get) => ({
-  ratings: [...mockRatings],
-  npsScore: calcNPS(mockRatings),
+  ratings: [],
+  npsScore: 0,
+
+  setRatings: (ratings) => set({ ratings, npsScore: calcNPS(ratings) }),
 
   addRating: (rating) =>
     set((state) => {

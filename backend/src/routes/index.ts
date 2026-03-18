@@ -9,6 +9,9 @@ import inventoryRoutes from './inventory.routes';
 import serviceCatalogRoutes from './service-catalog.routes';
 import quoteRoutes from './quote.routes';
 import serviceOrderRoutes from './service-order.routes';
+import transactionRoutes from './transaction.routes';
+import goalRoutes from './goal.routes';
+import ratingRoutes from './rating.routes';
 
 const router = Router();
 
@@ -22,6 +25,9 @@ router.use('/inventory', inventoryRoutes);
 router.use('/services', serviceCatalogRoutes);
 router.use('/quotes', quoteRoutes);
 router.use('/service-orders', serviceOrderRoutes);
+router.use('/transactions', transactionRoutes);
+router.use('/goals', goalRoutes);
+router.use('/ratings', ratingRoutes);
 
 router.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

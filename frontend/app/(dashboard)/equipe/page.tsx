@@ -20,7 +20,6 @@ import {
   Mail,
   BarChart2,
   Users,
-  Pencil,
   Briefcase,
   CalendarDays,
   Clock,
@@ -168,7 +167,6 @@ export default function EquipePage() {
   const { token } = useAuthStore();
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [selectedDate, setSelectedDate] = useState(today);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
@@ -189,13 +187,7 @@ export default function EquipePage() {
       )
   );
 
-  const handleEdit = (emp: Employee) => {
-    setEditingEmployee(emp);
-    setFormOpen(true);
-  };
-
   const handleNew = () => {
-    setEditingEmployee(null);
     setFormOpen(true);
   };
 
@@ -367,14 +359,6 @@ export default function EquipePage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 shrink-0"
-                        onClick={() => handleEdit(emp)}
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
                         className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
                         onClick={() => setDeleteTarget({ id: emp.id, name: emp.name })}
                       >
@@ -525,7 +509,6 @@ export default function EquipePage() {
       <EmployeeFormDialog
         open={formOpen}
         onOpenChange={setFormOpen}
-        employee={editingEmployee}
       />
       <ConfirmDeleteDialog
         open={!!deleteTarget}
