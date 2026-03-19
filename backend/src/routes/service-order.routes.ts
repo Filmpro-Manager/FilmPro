@@ -11,6 +11,7 @@ router.get('/:id',    serviceOrderController.getById);
 router.post('/',      serviceOrderController.create);
 router.put('/:id',    serviceOrderController.update);
 router.patch('/:id/status', serviceOrderController.updateStatus);
+router.post('/:id/complete', serviceOrderController.completeWithPayment);
 router.delete('/:id', serviceOrderController.remove);
 
 export default router;

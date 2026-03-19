@@ -63,6 +63,7 @@ model Store {
   serviceCatalog     ServiceCatalog[]
   quotes             Quote[]
   serviceOrders      ServiceOrder[]
+  appointments       Appointment[]
   transactions       Transaction[]
   goals              Goal[]
   clientRatings      ClientRating[]
@@ -99,6 +100,7 @@ model User {
   inventoryItemsCreated InventoryItem[] @relation("InventoryCreatedBy")
   quotesCreated Quote[] @relation("QuoteCreatedBy")
   serviceOrdersCreated ServiceOrder[] @relation("ServiceOrderCreatedBy")
+  appointmentsCreated  Appointment[]  @relation("AppointmentCreatedBy")
 
   @@map("users")
 }
@@ -378,6 +380,9 @@ model ServiceOrder {
   notes         String?
   internalNotes String? @map("internal_notes")
 
+  // Origem do agendamento
+  sourceAppointmentId String? @map("source_appointment_id")
+
   // Criado por
   createdById   String? @map("created_by_id")
   createdBy     User?   @relation("ServiceOrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -405,6 +410,7 @@ model Transaction {
   dueDate     String?   @map("due_date")
   paidDate    String?   @map("paid_date")
   isPaid      Boolean   @default(true) @map("is_paid")
+  paidAmount  Float?    @map("paid_amount")
   category    String
   costCenter  String?   @map("cost_center")
   paymentMethod String? @map("payment_method")
@@ -450,6 +456,63 @@ model Goal {
   updatedAt DateTime @updatedAt      @map("updated_at")
 
   @@map("goals")
+}
+
+// ─────────────────────────────────────────
+// APPOINTMENTS (Agenda)
+// ─────────────────────────────────────────
+model Appointment {
+  id      String @id @default(uuid())
+  storeId String @map("store_id")
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  number  String // AGD-2026-001
+
+  // Status: scheduled | in_progress | completed | cancelled
+  status  String @default("scheduled")
+
+  // Cliente
+  clientId   String? @map("client_id")
+  clientName String  @map("client_name")
+
+  // Veículo / Sujeito
+  vehicle String?
+  subject Json?
+
+  // Serviço
+  serviceType String @default("Serviço") @map("service_type")
+
+  // Técnico
+  employeeId   String? @map("employee_id")
+  employeeName String? @map("employee_name")
+
+  // Quando
+  date      String  // YYYY-MM-DD
+  endDate   String? @map("end_date")
+  startTime String? @map("start_time")
+  endTime   String? @map("end_time")
+
+  // Valor estimado
+  value Float @default(0)
+
+  // Origem: orçamento (opcional)
+  quoteId String? @map("quote_id")
+
+  // Materiais utilizados (JSON – registrado ao concluir)
+  materialsUsed Json? @map("materials_used")
+
+  // Notas
+  notes String?
+
+  // Criado por
+  createdById   String? @map("created_by_id")
+  createdBy     User?   @relation("AppointmentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdByName String? @map("created_by_name")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  @@map("appointments")
 }
 
 // ─────────────────────────────────────────

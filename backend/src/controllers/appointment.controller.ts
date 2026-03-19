@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import * as serviceOrderService from '../services/service-order.service';
+import * as appointmentService from '../services/appointment.service';
 import { JwtPayload } from '../utils/jwt';
 
 type AuthRequest = Request & { user: JwtPayload };
@@ -13,8 +13,8 @@ export async function getAll(req: Request, res: Response, next: NextFunction): P
     const storeId = getStoreId(req);
     if (!storeId) { res.status(403).json({ message: 'Loja não identificada' }); return; }
 
-    const orders = await serviceOrderService.getAllByStore(storeId);
-    res.json(orders);
+    const appointments = await appointmentService.getAllByStore(storeId);
+    res.json(appointments);
   } catch (error) {
     next(error);
   }
@@ -25,10 +25,10 @@ export async function getById(req: Request, res: Response, next: NextFunction): 
     const storeId = getStoreId(req);
     if (!storeId) { res.status(403).json({ message: 'Loja não identificada' }); return; }
 
-    const order = await serviceOrderService.getById(req.params.id as string, storeId);
-    if (!order) { res.status(404).json({ message: 'Ordem de Serviço não encontrada' }); return; }
+    const appointment = await appointmentService.getById(req.params.id as string, storeId);
+    if (!appointment) { res.status(404).json({ message: 'Agendamento não encontrado' }); return; }
 
-    res.json(order);
+    res.json(appointment);
   } catch (error) {
     next(error);
   }
@@ -40,17 +40,17 @@ export async function create(req: Request, res: Response, next: NextFunction): P
     if (!storeId) { res.status(403).json({ message: 'Loja não identificada' }); return; }
 
     const { date, clientName } = req.body as { date?: string; clientName?: string };
-    if (!date)        { res.status(400).json({ message: 'Data do serviço é obrigatória' }); return; }
-    if (!clientName)  { res.status(400).json({ message: 'Nome do cliente é obrigatório' }); return; }
+    if (!date)       { res.status(400).json({ message: 'Data do agendamento é obrigatória' }); return; }
+    if (!clientName) { res.status(400).json({ message: 'Nome do cliente é obrigatório' }); return; }
 
     const user = (req as AuthRequest).user;
-    const order = await serviceOrderService.create({
+    const appointment = await appointmentService.create({
       ...req.body,
       storeId,
       createdById: user.id,
       createdByName: user.name,
     });
-    res.status(201).json(order);
+    res.status(201).json(appointment);
   } catch (error) {
     next(error);
   }
@@ -61,8 +61,8 @@ export async function update(req: Request, res: Response, next: NextFunction): P
     const storeId = getStoreId(req);
     if (!storeId) { res.status(403).json({ message: 'Loja não identificada' }); return; }
 
-    const order = await serviceOrderService.update(req.params.id as string, storeId, req.body);
-    res.json(order);
+    const appointment = await appointmentService.update(req.params.id as string, storeId, req.body);
+    res.json(appointment);
   } catch (error) {
     next(error);
   }
@@ -76,8 +76,8 @@ export async function updateStatus(req: Request, res: Response, next: NextFuncti
     const { status } = req.body as { status: string };
     if (!status) { res.status(400).json({ message: 'Status é obrigatório' }); return; }
 
-    const order = await serviceOrderService.updateStatus(req.params.id as string, storeId, status);
-    res.json(order);
+    const appointment = await appointmentService.updateStatus(req.params.id as string, storeId, status);
+    res.json(appointment);
   } catch (error) {
     next(error);
   }
@@ -88,41 +88,26 @@ export async function remove(req: Request, res: Response, next: NextFunction): P
     const storeId = getStoreId(req);
     if (!storeId) { res.status(403).json({ message: 'Loja não identificada' }); return; }
 
-    await serviceOrderService.remove(req.params.id as string, storeId);
+    await appointmentService.remove(req.params.id as string, storeId);
     res.status(204).send();
   } catch (error) {
     next(error);
   }
 }
 
-export async function completeWithPayment(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function convertToServiceOrder(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const storeId = getStoreId(req);
     if (!storeId) { res.status(403).json({ message: 'Loja não identificada' }); return; }
 
-    const { paymentMethod, isPaid, paidDate, installments } = req.body as {
-      paymentMethod?: string;
-      isPaid?: boolean;
-      paidDate?: string;
-      installments?: number;
-    };
-
-    if (!paymentMethod) { res.status(400).json({ message: 'Forma de pagamento é obrigatória' }); return; }
-
     const user = (req as AuthRequest).user;
-    const order = await serviceOrderService.completeWithPayment(
+    const so = await appointmentService.convertToServiceOrder(
       req.params.id as string,
       storeId,
-      {
-        paymentMethod,
-        isPaid: isPaid ?? true,
-        paidDate,
-        installments,
-        createdById: user.id,
-        createdByName: user.name,
-      },
+      user.id,
+      user.name,
     );
-    res.json(order);
+    res.status(201).json(so);
   } catch (error) {
     next(error);
   }

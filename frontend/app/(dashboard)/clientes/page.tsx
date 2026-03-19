@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { Plus, Phone, Car, Trash2, Upload, Download, Square, CheckSquare } from "lucide-react";
+import { Plus, Phone, Car, Trash2, Upload, Download, Square, CheckSquare, Pencil, Eye } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
@@ -62,6 +62,7 @@ export default function ClientesPage() {
   const [openForm, setOpenForm]             = useState(false);
   const [openImport, setOpenImport]         = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [editTarget, setEditTarget]         = useState<Client | null>(null);
   const [loading, setLoading]               = useState(true);
   const [selectMode, setSelectMode]         = useState(false);
   const [selectedIds, setSelectedIds]       = useState<Set<string>>(new Set());
@@ -202,7 +203,7 @@ export default function ClientesPage() {
           <Download className="h-4 w-4" />
           Exportar CSV
         </Button>
-        <Button size="sm" disabled={selectMode} onClick={() => setOpenForm(true)}>
+        <Button size="sm" disabled={selectMode} onClick={() => { setEditTarget(null); setOpenForm(true); }}>
           <Plus className="h-4 w-4" />
           Novo Cliente
         </Button>
@@ -321,7 +322,12 @@ export default function ClientesPage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => setSelectedClient(client)}>
+                    <Eye className="w-3.5 h-3.5 mr-2" />
                     Ver detalhes
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setEditTarget(client); setOpenForm(true); }}>
+                    <Pencil className="w-3.5 h-3.5 mr-2" />
+                    Editar cliente
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -340,7 +346,11 @@ export default function ClientesPage() {
       </div>
 
       <ClientCsvImportDialog open={openImport} onOpenChange={setOpenImport} />
-      <ClientFormDialog open={openForm} onOpenChange={setOpenForm} />
+      <ClientFormDialog
+        open={openForm}
+        onOpenChange={(v) => { setOpenForm(v); if (!v) setEditTarget(null); }}
+        editing={editTarget}
+      />
       <ClientDetailDialog
         client={selectedClient}
         open={!!selectedClient}

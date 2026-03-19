@@ -234,6 +234,7 @@ export interface Appointment {
   materialsUsed?: MaterialUsage[];
   notes?: string;
   category?: ServiceCategory;  // automotivo | arquitetura
+  sourceAppointmentId?: string; // origem: agendamento convertido em OS
 }
 
 // ─── Transactions ─────────────────────────────────────────────────────────────
@@ -247,6 +248,7 @@ export interface Transaction {
   dueDate?: string;           // vencimento (contas a pagar/receber)
   paidDate?: string;          // data do pagamento efetivo
   isPaid?: boolean;           // quitado?
+  paidAmount?: number;        // valor já pago (parcial)
   category: string;
   costCenter?: string;        // centro de custo
   paymentMethod?: string;

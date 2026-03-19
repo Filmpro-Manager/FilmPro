@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, MapPin, Car, ChevronDown, ChevronUp } from "lucide-react";
@@ -8,7 +8,8 @@ import { clientSchema, type ClientInput } from "@/lib/validators";
 import { maskCEP, maskPhone, maskPlate, maskCPF, maskCNPJ } from "@/lib/masks";
 import { useClientsStore } from "@/store/clients-store";
 import { useAuthStore } from "@/store/auth-store";
-import { apiCreateClient, apiCreateVehicle, type ApiClient } from "@/lib/api";
+import { apiCreateClient, apiCreateVehicle, apiUpdateClient, type ApiClient } from "@/lib/api";
+import type { Client } from "@/types";
 import { BRAND_NAMES, getModelsByBrand } from "@/data/car-brands";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -37,9 +38,11 @@ const COLORS = [
 interface ClientFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  editing?: Client | null;
 }
 
-export function ClientFormDialog({ open, onOpenChange }: ClientFormDialogProps) {
+export function ClientFormDialog({ open, onOpenChange, editing }: ClientFormDialogProps) {
+  const isEditing = !!editing;
   const [showVehicle, setShowVehicle] = useState(false);
 
   const {
@@ -56,7 +59,31 @@ export function ClientFormDialog({ open, onOpenChange }: ClientFormDialogProps) 
   });
 
   const addClient = useClientsStore((s) => s.addClient);
+  const updateClientStore = useClientsStore((s) => s.updateClient);
   const { token } = useAuthStore();
+
+  // Pré-preenche o form quando abrir em modo de edição
+  useEffect(() => {
+    if (open && editing) {
+      reset({
+        name: editing.name,
+        phone: editing.phone ?? "",
+        documentType: (editing.documentType as "none" | "cpf" | "cnpj") ?? "none",
+        document: editing.document ?? "",
+        notes: editing.notes ?? "",
+        addressZipCode:      editing.address?.zipCode      ?? "",
+        addressStreet:       editing.address?.street       ?? "",
+        addressNumber:       editing.address?.number       ?? "",
+        addressComplement:   editing.address?.complement   ?? "",
+        addressNeighborhood: editing.address?.neighborhood ?? "",
+        addressCity:         editing.address?.city         ?? "",
+        addressState:        editing.address?.state        ?? "",
+      });
+    } else if (!open) {
+      reset({ documentType: "none" });
+      setShowVehicle(false);
+    }
+  }, [open, editing, reset]);
   const selectedBrand = watch("vehicleBrand") ?? "";
   const docType = watch("documentType");
   const models = getModelsByBrand(selectedBrand);
@@ -119,41 +146,46 @@ export function ClientFormDialog({ open, onOpenChange }: ClientFormDialogProps) 
   async function onSubmit(data: ClientInput) {
     if (!token) { toast.error("Sessão expirada"); return; }
 
-    const hasVehicle = data.vehicleBrand || data.vehicleModel || data.vehiclePlate;
+    const payload = {
+      name: data.name,
+      phone: data.phone || undefined,
+      document: data.documentType !== "none" ? data.document : undefined,
+      notes: data.notes || undefined,
+      addressZipcode:    data.addressZipCode      || undefined,
+      addressStreet:     data.addressStreet       || undefined,
+      addressNumber:     data.addressNumber       || undefined,
+      addressComplement: data.addressComplement   || undefined,
+      addressDistrict:   data.addressNeighborhood || undefined,
+      addressCity:       data.addressCity         || undefined,
+      addressState:      data.addressState        || undefined,
+    };
 
     try {
-      const created = await apiCreateClient({
-        name: data.name,
-        phone: data.phone || undefined,
-        document: data.documentType !== "none" ? data.document : undefined,
-        notes: data.notes || undefined,
-        addressZipcode:    data.addressZipCode     || undefined,
-        addressStreet:     data.addressStreet      || undefined,
-        addressNumber:     data.addressNumber      || undefined,
-        addressComplement: data.addressComplement  || undefined,
-        addressDistrict:   data.addressNeighborhood || undefined,
-        addressCity:       data.addressCity        || undefined,
-        addressState:      data.addressState       || undefined,
-      }, token);
-
-      if (hasVehicle) {
-        const vehicle = await apiCreateVehicle(created.id, {
-          brand: data.vehicleBrand ?? "",
-          model: data.vehicleModel ?? "",
-          plate: data.vehiclePlate ?? undefined,
-          color: data.vehicleColor ?? undefined,
-          year: data.vehicleYear ?? undefined,
-        }, token);
-        created.vehicles = [vehicle];
+      if (isEditing && editing) {
+        const updated = await apiUpdateClient(editing.id, payload, token);
+        updateClientStore(mapApiClient(updated, data.documentType, data.document));
+        toast.success("Cliente atualizado!", { description: data.name });
+      } else {
+        const hasVehicle = data.vehicleBrand || data.vehicleModel || data.vehiclePlate;
+        const created = await apiCreateClient(payload, token);
+        if (hasVehicle) {
+          const vehicle = await apiCreateVehicle(created.id, {
+            brand: data.vehicleBrand ?? "",
+            model: data.vehicleModel ?? "",
+            plate: data.vehiclePlate ?? undefined,
+            color: data.vehicleColor ?? undefined,
+            year: data.vehicleYear ?? undefined,
+          }, token);
+          created.vehicles = [vehicle];
+        }
+        addClient(mapApiClient(created, data.documentType, data.document));
+        toast.success("Cliente cadastrado!", { description: data.name });
       }
-
-      addClient(mapApiClient(created, data.documentType, data.document));
-      toast.success("Cliente cadastrado!", { description: data.name });
-      reset();
+      reset({ documentType: "none" });
       setShowVehicle(false);
       onOpenChange(false);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Erro ao cadastrar cliente");
+      toast.error(err instanceof Error ? err.message : isEditing ? "Erro ao atualizar cliente" : "Erro ao cadastrar cliente");
     }
   }
 
@@ -161,7 +193,7 @@ export function ClientFormDialog({ open, onOpenChange }: ClientFormDialogProps) 
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Novo Cliente</DialogTitle>
+          <DialogTitle>{isEditing ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 py-2">
@@ -310,7 +342,8 @@ export function ClientFormDialog({ open, onOpenChange }: ClientFormDialogProps) 
             </FormField>
           </div>
 
-          {/* ── Veículo (colapsável) ────────────────────────────────────── */}
+          {/* ── Veículo (colapsável) — apenas para novos clientes ──────── */}
+          {!isEditing && <>
           <Separator />
           <button
             type="button"
@@ -412,6 +445,8 @@ export function ClientFormDialog({ open, onOpenChange }: ClientFormDialogProps) 
             </div>
           )}
 
+          </>}
+
           {/* ── Observações ────────────────────────────────────────────── */}
           <Separator />
           <FormField label="Observações" htmlFor="notes">
@@ -429,7 +464,7 @@ export function ClientFormDialog({ open, onOpenChange }: ClientFormDialogProps) 
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Salvar Cliente
+              {isEditing ? "Salvar Alterações" : "Salvar Cliente"}
             </Button>
           </DialogFooter>
         </form>

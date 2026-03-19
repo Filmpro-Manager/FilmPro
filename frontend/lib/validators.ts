@@ -139,6 +139,8 @@ export const appointmentSchema = z
     quoteId: z.string().optional(),
     date: z.string().min(1, "Data de início obrigatória"),
     endDate: z.string().optional(),
+    startTime: z.string().optional(),
+    endTime: z.string().optional(),
     multiDay: z.boolean().optional(),
     value: z.number().min(0, "Valor inválido"),
     paymentMethod: z.string().optional(),
@@ -190,6 +192,7 @@ export const employeeSchema = z.object({
 export const userSchema = z.object({
   name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres"),
   email: z.string().email("E-mail inválido"),
+  phone: z.string().optional().or(z.literal("")),
   role: z.enum(["OWNER", "MANAGER", "EMPLOYEE"]),
   password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres").optional(),
   isActive: z.boolean(),

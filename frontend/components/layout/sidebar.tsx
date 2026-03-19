@@ -20,6 +20,7 @@ import {
   Target,
   BarChart3,
   Settings,
+  SlidersHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
@@ -65,8 +66,9 @@ const navGroups: NavGroup[] = [
       { label: "Equipe",     href: "/equipe",                icon: UserCog,   roles: ["OWNER","MANAGER"], module: "hasTeam" },
       { label: "Metas",      href: "/metas",                 icon: Target,    roles: ["OWNER","MANAGER"] },
       { label: "Relatórios", href: "/relatorios",            icon: BarChart3, roles: ["OWNER"] },
-      { label: "Empresa",    href: "/configuracoes/empresa", icon: Building2, roles: ["OWNER"] },
-      { label: "Meu Perfil", href: "/configuracoes/perfil",  icon: Settings },
+      { label: "Empresa",    href: "/configuracoes/empresa",  icon: Building2,  roles: ["OWNER"] },
+      { label: "Sistema",    href: "/configuracoes/sistema",  icon: SlidersHorizontal, roles: ["OWNER"] },
+      { label: "Meu Perfil", href: "/configuracoes/perfil",   icon: Settings },
     ],
   },
 ];

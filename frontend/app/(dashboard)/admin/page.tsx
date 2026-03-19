@@ -20,11 +20,11 @@ import {
   Crown,
   AlertTriangle,
   Trash2,
+  Pencil,
 } from "lucide-react";
 import { UserFormDialog } from "@/components/admin/user-form-dialog";
 import { useUsersStore } from "@/store/users-store";
-import { useAuthStore } from "@/store/auth-store";
-import { apiDeleteUser, apiUpdateUser } from "@/lib/api";
+import { apiDeleteUser, apiSetUserActive } from "@/lib/api";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 
 function getInitials(name: string) {
@@ -65,6 +65,7 @@ export default function AdminPage() {
   const deleteUser = useUsersStore((s) => s.deleteUser);
   const updateUser = useUsersStore((s) => s.updateUser);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [editTarget, setEditTarget] = useState<User | null>(null);
   const { token } = useAuthStore();
 
   // Role guard — redirect non-owners
@@ -106,6 +107,12 @@ export default function AdminPage() {
   };
 
   const handleNew = () => {
+    setEditTarget(null);
+    setFormOpen(true);
+  };
+
+  const handleEdit = (u: User) => {
+    setEditTarget(u);
     setFormOpen(true);
   };
 
@@ -274,11 +281,19 @@ export default function AdminPage() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8"
+                              title="Editar usuário"
+                              onClick={() => handleEdit(u)}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
                               title={u.active ? "Desativar usuário" : "Ativar usuário"}
                               onClick={async () => {
                                 if (!token) return;
-                                const newStatus = u.active ? "inactive" : "active";
-                                await apiUpdateUser(u.id, { status: newStatus }, token).catch(() => {});
+                                await apiSetUserActive(u.id, !u.active, token).catch(() => {});
                                 updateUser({ ...u, active: !u.active });
                               }}
                             >
@@ -311,7 +326,11 @@ export default function AdminPage() {
 
       <UserFormDialog
         open={formOpen}
-        onOpenChange={setFormOpen}
+        onOpenChange={(open) => {
+          setFormOpen(open);
+          if (!open) setEditTarget(null);
+        }}
+        editing={editTarget}
       />
       <ConfirmDeleteDialog
         open={!!deleteTarget}

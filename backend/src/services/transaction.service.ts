@@ -11,6 +11,7 @@ const select = {
   dueDate: true,
   paidDate: true,
   isPaid: true,
+  paidAmount: true,
   category: true,
   costCenter: true,
   paymentMethod: true,
@@ -38,6 +39,7 @@ export interface CreateTransactionInput {
   dueDate?: string;
   paidDate?: string;
   isPaid?: boolean;
+  paidAmount?: number;
   category: string;
   costCenter?: string;
   paymentMethod?: string;
@@ -80,6 +82,7 @@ export async function create(input: CreateTransactionInput) {
         dueDate: input.dueDate ?? null,
         paidDate: input.paidDate ?? null,
         isPaid: input.isPaid ?? true,
+        paidAmount: input.paidAmount ?? null,
         category: input.category,
         costCenter: input.costCenter ?? null,
         paymentMethod: input.paymentMethod ?? null,
@@ -116,6 +119,7 @@ export async function update(id: string, storeId: string, input: UpdateTransacti
         ...(input.date        !== undefined && { date: input.date }),
         ...(input.dueDate     !== undefined && { dueDate: input.dueDate }),
         ...(input.isPaid      !== undefined && { isPaid: input.isPaid }),
+        ...(input.paidAmount  !== undefined && { paidAmount: input.paidAmount }),
         ...(input.category    !== undefined && { category: input.category }),
         ...(input.paymentMethod !== undefined && { paymentMethod: input.paymentMethod }),
       },

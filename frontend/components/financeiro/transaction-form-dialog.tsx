@@ -16,6 +16,8 @@ import { useClientsStore } from "@/store/clients-store";
 import { useAuthStore } from "@/store/auth-store";
 import { apiCreateTransaction } from "@/lib/api";
 import { maskCurrency, parseCurrency } from "@/lib/masks";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface TransactionFormDialogProps {
   open: boolean;
@@ -38,6 +40,9 @@ export function TransactionFormDialog({ open, onOpenChange }: TransactionFormDia
   const [category, setCategory] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [clientId, setClientId] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [isPaid, setIsPaid] = useState(true);
+  const [paidAmountDisplay, setPaidAmountDisplay] = useState("");
 
   const { addTransaction } = useTransactionsStore();
   const clients = useClientsStore((s) => s.clients);
@@ -50,6 +55,9 @@ export function TransactionFormDialog({ open, onOpenChange }: TransactionFormDia
     setCategory("");
     setPaymentMethod("");
     setClientId("");
+    setDueDate("");
+    setIsPaid(true);
+    setPaidAmountDisplay("");
     setType("income");
   }
 
@@ -69,6 +77,9 @@ export function TransactionFormDialog({ open, onOpenChange }: TransactionFormDia
         paymentMethod: paymentMethod || undefined,
         clientId: client?.id,
         clientName: client?.name,
+        dueDate: dueDate || undefined,
+        isPaid,
+        paidAmount: (!isPaid && parseCurrency(paidAmountDisplay)) || undefined,
       }, token);
       addTransaction({
         id: created.id,
@@ -78,6 +89,7 @@ export function TransactionFormDialog({ open, onOpenChange }: TransactionFormDia
         date: created.date,
         dueDate: created.dueDate ?? undefined,
         isPaid: created.isPaid,
+        paidAmount: created.paidAmount ?? undefined,
         category: created.category,
         paymentMethod: created.paymentMethod ?? undefined,
         clientId: created.clientId ?? undefined,
@@ -185,6 +197,42 @@ export function TransactionFormDialog({ open, onOpenChange }: TransactionFormDia
                   ))}
                 </SelectContent>
               </Select>
+            </FormField>
+          )}
+
+          <FormField label="Vencimento (opcional)" htmlFor="txDueDate">
+            <Input
+              id="txDueDate"
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+            />
+          </FormField>
+
+          <div className="flex items-center gap-3 rounded-lg border p-3">
+            <Switch
+              id="txIsPaid"
+              checked={isPaid}
+              onCheckedChange={setIsPaid}
+            />
+            <Label htmlFor="txIsPaid" className="cursor-pointer select-none">
+              Já foi {type === "income" ? "recebido" : "pago"}
+            </Label>
+          </div>
+
+          {!isPaid && (
+            <FormField label="Valor parcial já recebido (R$)" htmlFor="txPaidAmount">
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">R$</span>
+                <Input
+                  id="txPaidAmount"
+                  className="pl-9"
+                  inputMode="decimal"
+                  placeholder="0,00 — deixe em branco se ainda não recebeu"
+                  value={paidAmountDisplay}
+                  onChange={(e) => setPaidAmountDisplay(maskCurrency(e.target.value))}
+                />
+              </div>
             </FormField>
           )}
 

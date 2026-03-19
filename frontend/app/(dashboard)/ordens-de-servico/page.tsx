@@ -19,6 +19,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { QuickServiceDialog } from "@/components/shared/quick-service-dialog";
 import { AppointmentFormDialog } from "@/components/agenda/appointment-form-dialog";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
+import { CompleteServiceOrderDialog } from "@/components/ordens-de-servico/complete-service-order-dialog";
 import { apiGetServiceOrders, apiUpdateServiceOrderStatus, apiDeleteServiceOrder, type ApiServiceOrder } from "@/lib/api";
 import { formatCurrency, formatDate, appointmentStatusLabel } from "@/lib/utils";
 import type { Appointment, AppointmentStatus, ServiceCategory } from "@/types";
@@ -43,6 +44,7 @@ function mapApiServiceOrder(api: ApiServiceOrder): Appointment {
     status: api.status as Appointment["status"],
     value: api.value,
     notes: api.notes ?? undefined,
+    sourceAppointmentId: api.sourceAppointmentId ?? undefined,
   };
 }
 
@@ -108,6 +110,7 @@ export default function OrdensDeServicoPage() {
   const [quickOpen, setQuickOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [editTarget, setEditTarget] = useState<Appointment | null>(null);
+  const [completeTarget, setCompleteTarget] = useState<Appointment | null>(null);
 
   // ── Filtros ───────────────────────────────────────────────────────────────
   const filtered = services.filter((s) => {
@@ -390,8 +393,12 @@ export default function OrdensDeServicoPage() {
                             <DropdownMenuItem
                               key={action.value}
                               onClick={() => {
-                                updateStatus(service.id, action.value);
-                                if (token) apiUpdateServiceOrderStatus(service.id, action.value, token).catch(() => {});
+                                if (action.value === "completed") {
+                                  setCompleteTarget(service);
+                                } else {
+                                  updateStatus(service.id, action.value);
+                                  if (token) apiUpdateServiceOrderStatus(service.id, action.value, token).catch(() => {});
+                                }
                               }}
                               className="text-sm cursor-pointer"
                             >
@@ -437,6 +444,12 @@ export default function OrdensDeServicoPage() {
         open={!!editTarget}
         onOpenChange={(open) => !open && setEditTarget(null)}
         appointment={editTarget}
+      />
+
+      <CompleteServiceOrderDialog
+        open={!!completeTarget}
+        onOpenChange={(open) => !open && setCompleteTarget(null)}
+        serviceOrder={completeTarget}
       />
 
       <ConfirmDeleteDialog

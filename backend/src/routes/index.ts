@@ -12,6 +12,7 @@ import serviceOrderRoutes from './service-order.routes';
 import transactionRoutes from './transaction.routes';
 import goalRoutes from './goal.routes';
 import ratingRoutes from './rating.routes';
+import appointmentRoutes from './appointment.routes';
 
 const router = Router();
 
@@ -28,6 +29,7 @@ router.use('/service-orders', serviceOrderRoutes);
 router.use('/transactions', transactionRoutes);
 router.use('/goals', goalRoutes);
 router.use('/ratings', ratingRoutes);
+router.use('/appointments', appointmentRoutes);
 
 router.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

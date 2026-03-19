@@ -33,6 +33,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import { QuoteFormDialog } from "@/components/orcamentos/quote-form-dialog";
 import { QuoteDetailDialog } from "@/components/orcamentos/quote-detail-dialog";
+import { FollowupPanel } from "@/components/orcamentos/followup-panel";
 import { useQuotesStore } from "@/store/quotes-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useServicesStore } from "@/store/services-store";
@@ -400,6 +401,8 @@ export default function OrcamentosPage() {
           </CardContent></Card>
         )}
       </div>
+
+      <FollowupPanel quotes={quotes} onOpenQuote={(q) => setDetailTarget(q)} />
 
       {/* Tabs + Filtros + Tabela */}
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>

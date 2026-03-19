@@ -1,5 +1,6 @@
 import prisma from '../lib/prisma';
 import { handlePrismaError } from '../utils/prisma-error';
+import * as transactionService from './transaction.service';
 
 // ─── Select ───────────────────────────────────────────────────────────────────
 
@@ -24,6 +25,7 @@ const serviceOrderSelect = {
   items: true,
   notes: true,
   internalNotes: true,
+  sourceAppointmentId: true,
   createdById: true,
   createdByName: true,
   createdAt: true,
@@ -59,6 +61,7 @@ interface CreateServiceOrderInput {
   items?: object;
   notes?: string;
   internalNotes?: string;
+  sourceAppointmentId?: string;
   createdById?: string;
   createdByName?: string;
 }
@@ -107,6 +110,7 @@ export async function create(input: CreateServiceOrderInput) {
         items: input.items ?? undefined,
         notes: input.notes ?? null,
         internalNotes: input.internalNotes ?? null,
+        sourceAppointmentId: input.sourceAppointmentId ?? null,
         createdById: input.createdById ?? null,
         createdByName: input.createdByName ?? null,
       },
@@ -178,4 +182,81 @@ export async function remove(id: string, storeId: string) {
   if (!existing) throw Object.assign(new Error('Ordem de Serviço não encontrada'), { statusCode: 404 });
 
   await prisma.serviceOrder.delete({ where: { id } });
+}
+
+export interface CompleteWithPaymentInput {
+  paymentMethod: string;
+  isPaid: boolean;
+  paidDate?: string;
+  installments?: number;
+  createdById?: string;
+  createdByName?: string;
+}
+
+export async function completeWithPayment(
+  id: string,
+  storeId: string,
+  input: CompleteWithPaymentInput,
+) {
+  const so = await prisma.serviceOrder.findFirst({ where: { id, storeId }, select: serviceOrderSelect });
+  if (!so) throw Object.assign(new Error('Ordem de Serviço não encontrada'), { statusCode: 404 });
+
+  // Marca a OS como concluída
+  const updated = await prisma.serviceOrder.update({
+    where: { id },
+    data: { status: 'completed' },
+    select: serviceOrderSelect,
+  });
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  if (input.installments && input.installments > 1) {
+    // Cria uma transação por parcela
+    const installmentRef = crypto.randomUUID();
+    const installmentValue = Number((so.value / input.installments).toFixed(2));
+
+    for (let i = 1; i <= input.installments; i++) {
+      await transactionService.create({
+        storeId,
+        type: 'income',
+        description: `${so.serviceType} – ${so.clientName} (${i}/${input.installments})`,
+        amount: installmentValue,
+        date: today,
+        isPaid: i === 1 ? input.isPaid : false,
+        paidDate: i === 1 && input.isPaid ? (input.paidDate ?? today) : undefined,
+        paidAmount: i === 1 && input.isPaid ? installmentValue : undefined,
+        category: 'Serviços',
+        paymentMethod: input.paymentMethod,
+        installments: input.installments,
+        installmentNum: i,
+        installmentRef,
+        clientId: so.clientId ?? undefined,
+        clientName: so.clientName,
+        appointmentId: id,
+        createdById: input.createdById,
+        createdByName: input.createdByName,
+      });
+    }
+  } else {
+    // Cria uma única transação
+    await transactionService.create({
+      storeId,
+      type: 'income',
+      description: `${so.serviceType} – ${so.clientName}`,
+      amount: so.value,
+      date: today,
+      isPaid: input.isPaid,
+      paidDate: input.isPaid ? (input.paidDate ?? today) : undefined,
+      paidAmount: input.isPaid ? so.value : undefined,
+      category: 'Serviços',
+      paymentMethod: input.paymentMethod,
+      clientId: so.clientId ?? undefined,
+      clientName: so.clientName,
+      appointmentId: id,
+      createdById: input.createdById,
+      createdByName: input.createdByName,
+    });
+  }
+
+  return updated;
 }

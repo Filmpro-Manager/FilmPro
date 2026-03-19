@@ -7,7 +7,7 @@ import { Loader2, CalendarRange, Plus, Trash2, Package, AlertCircle } from "luci
 import { appointmentSchema, type AppointmentInput } from "@/lib/validators";
 import { maskCurrency, parseCurrency } from "@/lib/masks";
 import type { Appointment, MaterialUsage } from "@/types";
-import { apiCreateServiceOrder, apiUpdateServiceOrder } from "@/lib/api";
+import { apiCreateAppointment, apiUpdateAppointment } from "@/lib/api";
 import { useAuthStore } from "@/store/auth-store";
 import { useServiceCatalogStore } from "@/store/service-catalog-store";
 import { useServicesStore } from "@/store/services-store";
@@ -92,6 +92,8 @@ export function AppointmentFormDialog({
           employeeId: appointment.employeeId,
           date: appointment.date,
           endDate: appointment.endDate ?? "",
+          startTime: appointment.startTime ?? "",
+          endTime: appointment.endTime ?? "",
           multiDay: isMulti,
           value: raw,
           notes: appointment.notes ?? "",
@@ -206,12 +208,15 @@ export function AppointmentFormDialog({
       employeeName: employee?.name ?? appointment?.employeeName ?? "",
       date: data.date,
       endDate: data.endDate || undefined,
+      startTime: data.startTime || undefined,
+      endTime: data.endTime || undefined,
       value: data.value,
       notes: data.notes,
+      materialsUsed: usedMaterials.length > 0 ? usedMaterials : undefined,
     };
 
     if (appointment) {
-      const updated = await apiUpdateServiceOrder(appointment.id, { ...payload, status: data.status }, token);
+      const updated = await apiUpdateAppointment(appointment.id, { ...payload, status: data.status }, token);
       updateService({
         ...appointment,
         ...data,
@@ -222,7 +227,7 @@ export function AppointmentFormDialog({
         materialsUsed: usedMaterials,
       });
     } else {
-      const created = await apiCreateServiceOrder(payload, token);
+      const created = await apiCreateAppointment(payload, token);
       addService({
         id: created.id,
         clientId: created.clientId ?? "",
@@ -420,6 +425,18 @@ export function AppointmentFormDialog({
               <FormField label="Status" htmlFor="status-multi" error={errors.status?.message} className="sm:col-span-2">
                 {statusSelect("status-multi")}
               </FormField>
+            )}
+
+            {/* Hora início / Hora fim */}
+            {!multiDay && (
+              <>
+                <FormField label="Hora de Início" htmlFor="startTime">
+                  <Input id="startTime" type="time" {...register("startTime")} />
+                </FormField>
+                <FormField label="Hora de Término" htmlFor="endTime">
+                  <Input id="endTime" type="time" {...register("endTime")} />
+                </FormField>
+              </>
             )}
 
             {/* Valor */}

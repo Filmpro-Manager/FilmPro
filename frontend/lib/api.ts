@@ -805,6 +805,7 @@ export interface ApiServiceOrder {
   items: unknown;
   notes: string | null;
   internalNotes: string | null;
+  sourceAppointmentId: string | null;
   createdById: string | null;
   createdByName: string | null;
   createdAt: string;
@@ -894,6 +895,148 @@ export async function apiDeleteServiceOrder(id: string, token: string): Promise<
   }
 }
 
+export interface CompleteServiceOrderData {
+  paymentMethod: string;
+  isPaid: boolean;
+  paidDate?: string;
+  installments?: number;
+}
+
+export async function apiCompleteServiceOrder(
+  id: string,
+  data: CompleteServiceOrderData,
+  token: string,
+): Promise<ApiServiceOrder> {
+  const res = await fetch(`${BASE_URL}/service-orders/${id}/complete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Erro ao finalizar ordem de serviço');
+  return json as ApiServiceOrder;
+}
+
+// ─── Appointments (Agenda) ────────────────────────────────────────────────────
+
+export interface ApiAppointment {
+  id: string;
+  storeId: string;
+  number: string;
+  status: string;
+  clientId: string | null;
+  clientName: string;
+  vehicle: string | null;
+  subject: unknown;
+  serviceType: string;
+  employeeId: string | null;
+  employeeName: string | null;
+  date: string;
+  endDate: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  value: number;
+  quoteId: string | null;
+  materialsUsed: unknown;
+  notes: string | null;
+  createdById: string | null;
+  createdByName: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateAppointmentData {
+  clientId?: string;
+  clientName: string;
+  vehicle?: string;
+  subject?: unknown;
+  serviceType?: string;
+  employeeId?: string;
+  employeeName?: string;
+  date: string;
+  endDate?: string;
+  startTime?: string;
+  endTime?: string;
+  value?: number;
+  quoteId?: string;
+  materialsUsed?: unknown;
+  notes?: string;
+}
+
+export async function apiGetAppointments(token: string): Promise<ApiAppointment[]> {
+  const res = await fetch(`${BASE_URL}/appointments`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Erro ao buscar agendamentos');
+  return data as ApiAppointment[];
+}
+
+export async function apiCreateAppointment(
+  data: CreateAppointmentData,
+  token: string,
+): Promise<ApiAppointment> {
+  const res = await fetch(`${BASE_URL}/appointments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Erro ao criar agendamento');
+  return json as ApiAppointment;
+}
+
+export async function apiUpdateAppointment(
+  id: string,
+  data: Partial<CreateAppointmentData> & { status?: string },
+  token: string,
+): Promise<ApiAppointment> {
+  const res = await fetch(`${BASE_URL}/appointments/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Erro ao atualizar agendamento');
+  return json as ApiAppointment;
+}
+
+export async function apiUpdateAppointmentStatus(
+  id: string,
+  status: string,
+  token: string,
+): Promise<ApiAppointment> {
+  const res = await fetch(`${BASE_URL}/appointments/${id}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ status }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Erro ao atualizar status do agendamento');
+  return json as ApiAppointment;
+}
+
+export async function apiDeleteAppointment(id: string, token: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/appointments/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.message ?? 'Erro ao excluir agendamento');
+  }
+}
+
+export async function apiConvertAppointmentToOS(id: string, token: string): Promise<ApiServiceOrder> {
+  const res = await fetch(`${BASE_URL}/appointments/${id}/convert-to-os`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Erro ao converter agendamento em OS');
+  return json as ApiServiceOrder;
+}
+
 // ─── Transactions ────────────────────────────────────────────────────────────
 
 export interface ApiTransaction {
@@ -906,6 +1049,7 @@ export interface ApiTransaction {
   dueDate: string | null;
   paidDate: string | null;
   isPaid: boolean;
+  paidAmount: number | null;
   category: string;
   costCenter: string | null;
   paymentMethod: string | null;
@@ -931,6 +1075,7 @@ export interface CreateTransactionData {
   date: string;
   dueDate?: string;
   isPaid?: boolean;
+  paidAmount?: number;
   category: string;
   paymentMethod?: string;
   clientId?: string;
@@ -967,6 +1112,30 @@ export async function apiDeleteTransaction(id: string, token: string): Promise<v
     const json = await res.json().catch(() => ({}));
     throw new Error(json.message ?? 'Erro ao excluir transação');
   }
+}
+
+export interface UpdateTransactionData {
+  description?: string;
+  amount?: number;
+  date?: string;
+  dueDate?: string;
+  isPaid?: boolean;
+  paidAmount?: number;
+  paidDate?: string;
+  category?: string;
+  paymentMethod?: string;
+  type?: string;
+}
+
+export async function apiUpdateTransaction(id: string, data: UpdateTransactionData, token: string): Promise<ApiTransaction> {
+  const res = await fetch(`${BASE_URL}/transactions/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Erro ao atualizar transação');
+  return json as ApiTransaction;
 }
 
 // ─── Goals ───────────────────────────────────────────────────────────────────
