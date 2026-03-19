@@ -294,7 +294,7 @@ export default function OrcamentosPage() {
           {row.subject?.type === "vehicle" && row.subject.plate && (
             <p className="text-xs text-muted-foreground font-mono">{row.subject.plate}</p>
           )}
-          {(row.subject?.type === "residence" || row.subject?.type === "commercial") && row.subject.address && (
+          {(row.subject?.type === "building" || row.subject?.type === "other") && row.subject.address && (
             <p className="text-xs text-muted-foreground truncate max-w-[160px]">{row.subject.address}</p>
           )}
         </div>
