@@ -12,7 +12,7 @@ import { useServicesStore } from "@/store/services-store";
 import { useAuthStore } from "@/store/auth-store";
 import { formatCurrency } from "@/lib/utils";
 import { Appointment, Employee } from "@/types";
-import { apiGetUsers, apiDeleteUser, type UserProfile } from "@/lib/api";
+import { apiDeleteUser, type UserProfile } from "@/lib/api";
 import { toast } from "sonner";
 import {
   UserPlus,
@@ -161,7 +161,6 @@ const roleVariant: Record<string, "blue" | "secondary" | "default"> = {
 export default function EquipePage() {
   const today = toLocalDateString(new Date());
   const employees = useEmployeesStore((s) => s.employees);
-  const setEmployees = useEmployeesStore((s) => s.setEmployees);
   const deleteEmployeeStore = useEmployeesStore((s) => s.deleteEmployee);
   const services = useServicesStore((s) => s.services);
   const { token } = useAuthStore();
@@ -169,13 +168,6 @@ export default function EquipePage() {
   const [formOpen, setFormOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(today);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
-
-  useEffect(() => {
-    if (!token) return;
-    apiGetUsers(token)
-      .then((data) => setEmployees(data.map(mapApiUserToEmployee)))
-      .catch(() => toast.error("Erro ao carregar usuários"));
-  }, [token]);
 
   const filtered = employees.filter(
     (emp) =>

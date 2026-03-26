@@ -190,7 +190,9 @@ model InventoryItem {
   costPrice   Float    @default(0)   @map("cost_price")
   pricePerUnit Float   @default(0)   @map("price_per_unit")
   transparency Int     @default(0)
+  color       String?
   sku         String?
+  rollWidth   Float?   @map("roll_width")
 
   createdById String?  @map("created_by_id")
   createdBy   User?    @relation("InventoryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)

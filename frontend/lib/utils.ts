@@ -62,13 +62,11 @@ export function appointmentStatusColor(
 
 export function filmTypeLabel(type: FilmType): string {
   const map: Record<FilmType, string> = {
-    automotive: "Automotiva",
-    architecture: "Arquitetônica",
-    security: "Segurança",
-    decorative: "Decorativa",
-    solar: "Solar",
+    adesivo: "Adesivo",
+    pelicula: "Película",
+    ppf: "PPF",
   };
-  return map[type];
+  return map[type] ?? type;
 }
 
 export function transactionTypeLabel(type: TransactionType): string {

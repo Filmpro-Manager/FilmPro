@@ -11,11 +11,9 @@ export type AppointmentStatus =
   | "created";
 
 export type FilmType =
-  | "automotive"
-  | "architecture"
-  | "security"
-  | "decorative"
-  | "solar";
+  | "adesivo"
+  | "pelicula"
+  | "ppf";
 
 export type TransactionType = "income" | "expense";
 
@@ -152,12 +150,14 @@ export interface Product {
   brand: string;
   model: string;
   type: FilmType;
-  transparency: number;
+  transparency?: number;
+  color?: string;
   availableMeters: number;
   costPrice: number;          // custo de aquisição por metro
   pricePerMeter: number;      // preço de venda por metro
   margin?: number;            // calculado: (pricePerMeter - costPrice) / pricePerMeter
   minimumStock: number;
+  rollWidth?: number;       // largura da bobina em metros
   supplier?: string;
   sku?: string;
   createdAt: string;

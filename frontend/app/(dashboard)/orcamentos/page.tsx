@@ -9,6 +9,9 @@ import {
   ArrowUpDown,
   SlidersHorizontal,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  CalendarDays,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -36,83 +39,10 @@ import { QuoteDetailDialog } from "@/components/orcamentos/quote-detail-dialog";
 import { FollowupPanel } from "@/components/orcamentos/followup-panel";
 import { useQuotesStore } from "@/store/quotes-store";
 import { useAuthStore } from "@/store/auth-store";
-import { useServicesStore } from "@/store/services-store";
-import { apiGetQuotes, apiDeleteQuote, apiUpdateQuoteStatus, apiGetServiceOrders, apiGetUsers, type ApiQuote, type ApiServiceOrder, type UserProfile } from "@/lib/api";
+import { apiDeleteQuote, apiUpdateQuoteStatus, apiGetUsers, type UserProfile } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { Quote, TableColumn, QuoteStatus, QuoteSubject, QuotePayment, Appointment } from "@/types";
+import type { Quote, TableColumn, QuoteStatus, QuoteSubject, QuotePayment } from "@/types";
 import { cn } from "@/lib/utils";
-
-// ─── Mapper ───────────────────────────────────────────────────────────────────
-
-function mapApiQuote(api: ApiQuote): Quote {
-  return {
-    id: api.id,
-    number: api.number,
-    issueDate: api.issueDate.slice(0, 10),
-    validUntil: api.validUntil ? api.validUntil.slice(0, 10) : "",
-    status: api.status as QuoteStatus,
-    clientId: api.clientId ?? "",
-    clientName: api.clientName,
-    clientPhone: api.clientPhone ?? undefined,
-    clientEmail: api.clientEmail ?? undefined,
-    clientDocument: api.clientDocument ?? undefined,
-    clientDocumentType: (api.clientDocumentType as "cpf" | "cnpj" | undefined) ?? undefined,
-    category: api.category as Quote["category"],
-    subject: api.subject as QuoteSubject | undefined,
-    sellerId: api.sellerId ?? undefined,
-    sellerName: api.sellerName ?? undefined,
-    createdById: api.createdById ?? undefined,
-    createdByName: api.createdByName ?? undefined,
-    items: api.items.map((item) => ({
-      id: item.id,
-      type: item.type as Quote["items"][0]["type"],
-      name: item.name,
-      description: item.description ?? undefined,
-      quantity: item.quantity,
-      unit: item.unit,
-      unitPrice: item.unitPrice,
-      discount: item.discount,
-      discountType: item.discountType as "value" | "percent",
-      total: item.total,
-      productId: item.productId ?? undefined,
-      serviceId: item.serviceId ?? undefined,
-      vehicleId: item.vehicleId ?? undefined,
-    })),
-    subtotal: api.subtotal,
-    discount: api.discount,
-    discountType: api.discountType as "value" | "percent" | undefined,
-    taxes: api.taxes ?? undefined,
-    totalValue: api.totalValue,
-    acceptedPaymentMethods: api.acceptedPaymentMethods,
-    payment: api.payment as QuotePayment | undefined,
-    notes: api.notes ?? undefined,
-    internalNotes: api.internalNotes ?? undefined,
-    convertedAt: api.convertedAt ?? undefined,
-    convertedToAppointmentId: api.convertedToAppointmentId ?? undefined,
-    createdAt: api.createdAt,
-    updatedAt: api.updatedAt,
-  };
-}
-
-function mapApiServiceOrder(api: ApiServiceOrder): Appointment {
-  return {
-    id: api.id,
-    clientId: api.clientId ?? "",
-    clientName: api.clientName,
-    vehicle: api.vehicle ?? "—",
-    serviceType: api.serviceType,
-    employeeId: api.employeeId ?? "",
-    employeeName: api.employeeName ?? "",
-    quoteId: api.quoteId ?? undefined,
-    date: api.date,
-    endDate: api.endDate ?? undefined,
-    startTime: api.startTime ?? undefined,
-    endTime: api.endTime ?? undefined,
-    status: api.status as Appointment["status"],
-    value: api.value,
-    notes: api.notes ?? undefined,
-  };
-}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -157,8 +87,8 @@ export default function OrcamentosPage() {
 
   // Filtros
   const [search, setSearch]                   = useState("");
-  const [filterMonth, setFilterMonth]         = useState<string>("all");
-  const [filterYear, setFilterYear]           = useState<string>("all");
+  const [filterMonth, setFilterMonth]         = useState<string>(String(NOW_MONTH_ORC));
+  const [filterYear, setFilterYear]           = useState<string>(String(NOW_YEAR_ORC));
   const [filterCategory, setFilterCategory]   = useState<string>("all");
   const [filterMinValue, setFilterMinValue]   = useState("");
   const [filterMaxValue, setFilterMaxValue]   = useState("");
@@ -174,61 +104,72 @@ export default function OrcamentosPage() {
   const [detailTarget, setDetailTarget] = useState<Quote | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
-  const { quotes, setQuotes, deleteQuote, updateStatus } = useQuotesStore();
-  const { setServices } = useServicesStore();
+  const { quotes, deleteQuote, updateStatus } = useQuotesStore();
   const { token } = useAuthStore();
   const isEmployee = useAuthStore((s) => s.user?.role === "EMPLOYEE");
 
-  // ─── Carregar dados da API ────────────────────────────────────────────────
+  // ─── Carregar usuários para filtro ───────────────────────────────────────────────
   useEffect(() => {
     if (!token) return;
-    apiGetQuotes(token)
-      .then((data) => setQuotes(data.map(mapApiQuote)))
-      .catch(() => {});
-    apiGetUsers(token)
-      .then(setUsers)
-      .catch(() => {});
-    apiGetServiceOrders(token)
-      .then((data) => setServices(data.map(mapApiServiceOrder)))
-      .catch(() => {});
+    apiGetUsers(token).then(setUsers).catch(() => {});
   }, [token]);
-
-  const availableYears = useMemo(() => {
-    const years = new Set(quotes.map((q) => q.createdAt.slice(0, 4)));
-    return Array.from(years).sort((a, b) => Number(b) - Number(a));
-  }, [quotes]);
 
   const activeFilterCount = useMemo(() => {
     let n = 0;
-    if (search.trim())            n++;
-    if (filterMonth !== "all")    n++;
-    if (filterYear !== "all")     n++;
-    if (filterCategory !== "all") n++;
-    if (filterMinValue)           n++;
-    if (filterMaxValue)           n++;
+    if (search.trim())             n++;
+    if (filterCategory !== "all")  n++;
+    if (filterMinValue)            n++;
+    if (filterMaxValue)            n++;
     if (filterCreatedBy !== "all") n++;
     return n;
-  }, [search, filterMonth, filterYear, filterCategory, filterMinValue, filterMaxValue, filterCreatedBy]);
+  }, [search, filterCategory, filterMinValue, filterMaxValue, filterCreatedBy]);
+
+  function prevMes() {
+    const m = parseInt(filterMonth);
+    const y = parseInt(filterYear);
+    if (filterMonth === "all" || filterYear === "all") {
+      setFilterMonth(String(NOW_MONTH_ORC)); setFilterYear(String(NOW_YEAR_ORC)); return;
+    }
+    if (m === 1) { setFilterYear(String(y - 1)); setFilterMonth("12"); }
+    else setFilterMonth(String(m - 1));
+  }
+  function nextMes() {
+    const m = parseInt(filterMonth);
+    const y = parseInt(filterYear);
+    if (filterMonth === "all" || filterYear === "all") {
+      setFilterMonth(String(NOW_MONTH_ORC)); setFilterYear(String(NOW_YEAR_ORC)); return;
+    }
+    if (m === 12) { setFilterYear(String(y + 1)); setFilterMonth("1"); }
+    else setFilterMonth(String(m + 1));
+  }
+  function irParaAtualOrc() { setFilterMonth(String(NOW_MONTH_ORC)); setFilterYear(String(NOW_YEAR_ORC)); }
 
   function clearFilters() {
-    setSearch(""); setFilterMonth("all"); setFilterYear("all");
+    setSearch("");
     setFilterCategory("all"); setFilterMinValue(""); setFilterMaxValue("");
     setFilterCreatedBy("all");
   }
 
+  const periodQuotes = useMemo(() => {
+    let result = [...quotes];
+    if (filterMonth !== "all") {
+      const m = String(Number(filterMonth)).padStart(2, "0");
+      result = result.filter((r) => r.createdAt.slice(5, 7) === m);
+    }
+    if (filterYear !== "all") result = result.filter((r) => r.createdAt.slice(0, 4) === filterYear);
+    return result;
+  }, [quotes, filterMonth, filterYear]);
+
   const stats = useMemo(() => {
-    const total        = quotes.length;
-    const totalValue   = quotes.reduce((a, q) => a + q.totalValue, 0);
-    const openValue    = quotes.filter((q) => q.status === "draft").reduce((a, q) => a + q.totalValue, 0);
-    const avgTicket    = total > 0 ? totalValue / total : 0;
-    const now          = new Date();
-    const ym           = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    const thisMonth    = quotes.filter((q) => q.createdAt.slice(0, 7) === ym).length;
-    return { total, totalValue, openValue, avgTicket, thisMonth };
-  }, [quotes]);
+    const total      = periodQuotes.length;
+    const totalValue = periodQuotes.reduce((a, q) => a + q.totalValue, 0);
+    const openValue  = periodQuotes.filter((q) => q.status === "draft").reduce((a, q) => a + q.totalValue, 0);
+    const avgTicket  = total > 0 ? totalValue / total : 0;
+    return { total, totalValue, openValue, avgTicket };
+  }, [periodQuotes]);
 
   const filtered = useMemo(() => {
-    let result = [...quotes];
+    let result = [...periodQuotes];
 
     if (tab !== "all") result = result.filter((q) => q.status === tab);
 
@@ -238,13 +179,6 @@ export default function OrcamentosPage() {
       r.number.toLowerCase().includes(q) ||
       (r.subject?.plate ?? "").toLowerCase().includes(q)
     );
-
-    if (filterMonth !== "all") {
-      const m = String(Number(filterMonth)).padStart(2, "0");
-      result = result.filter((r) => r.createdAt.slice(5, 7) === m);
-    }
-    if (filterYear !== "all")
-      result = result.filter((r) => r.createdAt.slice(0, 4) === filterYear);
 
     if (filterCategory !== "all")
       result = result.filter((r) => r.category === filterCategory);
@@ -372,25 +306,59 @@ export default function OrcamentosPage() {
         </Button>
       </PageHeader>
 
+      {/* ── Filtro de período ── */}
+      <div className="flex items-center gap-2">
+        <div className="flex items-center rounded-lg border bg-card overflow-hidden">
+          <button type="button" onClick={prevMes} className="px-3 py-2 hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" aria-label="Mês anterior">
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <div className="flex items-center gap-1.5 px-3 py-2 select-none min-w-[160px] justify-center">
+            <CalendarDays className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <span className="text-sm font-medium">
+              {filterYear !== "all" && filterMonth !== "all"
+                ? `${MONTHS[parseInt(filterMonth) - 1]} ${filterYear}`
+                : "Todos os períodos"}
+            </span>
+          </div>
+          <button type="button" onClick={nextMes} className="px-3 py-2 hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" aria-label="Próximo mês">
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+        {(filterYear === "all" || filterMonth === "all" ||
+          parseInt(filterMonth) !== NOW_MONTH_ORC || parseInt(filterYear) !== NOW_YEAR_ORC) && (
+          <button type="button" onClick={irParaAtualOrc}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2">
+            {filterYear === "all" || filterMonth === "all" ? "Este mês" : "Voltar ao atual"}
+          </button>
+        )}
+        {filterMonth !== "all" && filterYear !== "all" && (
+          <button type="button"
+            onClick={() => { setFilterMonth("all"); setFilterYear("all"); }}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2">
+            Ver todos
+          </button>
+        )}
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Card><CardContent className="p-4">
           <p className="text-xs text-muted-foreground mb-1">Total de orçamentos</p>
           <p className="text-2xl font-bold">{stats.total}</p>
-          <p className="text-xs text-muted-foreground">{stats.thisMonth} criado{stats.thisMonth !== 1 ? "s" : ""} este mês</p>
+          <p className="text-xs text-muted-foreground">no período selecionado</p>
         </CardContent></Card>
         {!isEmployee && (
           <Card><CardContent className="p-4">
             <p className="text-xs text-muted-foreground mb-1">Valor total</p>
             <p className="text-2xl font-bold tabular-nums">{formatCurrency(stats.totalValue)}</p>
-            <p className="text-xs text-muted-foreground">soma de todos os orçamentos</p>
+            <p className="text-xs text-muted-foreground">valor total no período</p>
           </CardContent></Card>
         )}
         {!isEmployee && (
           <Card><CardContent className="p-4">
             <p className="text-xs text-muted-foreground mb-1">Em aberto</p>
             <p className="text-2xl font-bold tabular-nums text-yellow-500">{formatCurrency(stats.openValue)}</p>
-            <p className="text-xs text-muted-foreground">orçamentos não enviados</p>
+            <p className="text-xs text-muted-foreground">em aberto no período</p>
           </CardContent></Card>
         )}
         {!isEmployee && (
@@ -462,40 +430,7 @@ export default function OrcamentosPage() {
 
                 {/* Corpo */}
                 <div className="p-4 space-y-4">
-                  {/* Período */}
-                  <div>
-                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Período</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">Mês</label>
-                        <Select value={filterMonth} onValueChange={setFilterMonth}>
-                          <SelectTrigger className="h-9 text-sm bg-secondary border-border">
-                            <SelectValue placeholder="Todos" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todos</SelectItem>
-                            {MONTHS.map((m, i) => <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">Ano</label>
-                        <Select value={filterYear} onValueChange={setFilterYear}>
-                          <SelectTrigger className="h-9 text-sm bg-secondary border-border">
-                            <SelectValue placeholder="Todos" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todos</SelectItem>
-                            {availableYears.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Categoria */}
+                  {/* Categoria */
                   <div className="space-y-1">
                     <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Categoria</label>
                     <Select value={filterCategory} onValueChange={setFilterCategory}>
@@ -577,8 +512,6 @@ export default function OrcamentosPage() {
         {activeFilterCount > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-2">
             {search && <FilterChip label={`"${search}"`} onRemove={() => setSearch("")} />}
-            {filterMonth !== "all" && <FilterChip label={MONTHS[Number(filterMonth) - 1]} onRemove={() => setFilterMonth("all")} />}
-            {filterYear !== "all" && <FilterChip label={filterYear} onRemove={() => setFilterYear("all")} />}
             {filterCategory !== "all" && <FilterChip label={filterCategory === "automotive" ? "Automotivo" : "Arquitetura"} onRemove={() => setFilterCategory("all")} />}
             {filterMinValue && <FilterChip label={`≥ R$ ${filterMinValue}`} onRemove={() => setFilterMinValue("")} />}
             {filterMaxValue && <FilterChip label={`≤ R$ ${filterMaxValue}`} onRemove={() => setFilterMaxValue("")} />}

@@ -280,7 +280,9 @@ export interface ApiInventoryItem {
   costPrice: number;
   pricePerUnit: number;
   transparency: number;
+  color: string | null;
   sku: string | null;
+  rollWidth: number | null;
   createdAt: string;
   updatedAt: string;
   createdBy: { id: string; name: string } | null;
@@ -306,7 +308,9 @@ export interface CreateInventoryItemData {
   costPrice?: number;
   pricePerUnit?: number;
   transparency?: number;
+  color?: string;
   sku?: string;
+  rollWidth?: number;
 }
 
 export interface CreateMovementData {
@@ -1081,6 +1085,11 @@ export interface CreateTransactionData {
   clientId?: string;
   clientName?: string;
   appointmentId?: string;
+  isRecurring?: boolean;
+  recurrenceDay?: number;
+  installmentRef?: string;
+  installments?: number;
+  installmentNum?: number;
 }
 
 export async function apiGetTransactions(token: string): Promise<ApiTransaction[]> {

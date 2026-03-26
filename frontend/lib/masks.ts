@@ -66,3 +66,27 @@ export function maskCurrency(value: string | number): string {
 export function parseCurrency(masked: string): number {
   return parseFloat(masked.replace(/\./g, "").replace(",", ".")) || 0;
 }
+
+/**
+ * Formata número decimal com vírgula BR enquanto o usuário digita.
+ * Aceita até `maxDecimals` casas decimais.
+ * Ex.: "152" → "1,52" | "175" → "1,75"
+ */
+export function maskDecimal(raw: string, maxDecimals = 2): string {
+  // Mantém apenas dígitos
+  const digits = raw.replace(/\D/g, "").slice(0, 8);
+  if (!digits) return "";
+  const num = parseInt(digits, 10) / Math.pow(10, maxDecimals);
+  return num.toLocaleString("pt-BR", {
+    minimumFractionDigits: maxDecimals,
+    maximumFractionDigits: maxDecimals,
+  });
+}
+
+/**
+ * Converte string mascarada com vírgula BR para number.
+ * Ex.: "1,52" → 1.52
+ */
+export function parseDecimal(masked: string): number {
+  return parseFloat(masked.replace(/\./g, "").replace(",", ".")) || 0;
+}

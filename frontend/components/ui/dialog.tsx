@@ -34,7 +34,18 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 bg-card border border-border p-6 shadow-2xl rounded-xl",
+        // Mobile: bottom sheet deslizando de baixo; Desktop: modal centralizado
+        "fixed z-50 bg-card border border-border shadow-2xl",
+        "w-full sm:w-[calc(100%-2rem)]",
+        "max-w-full sm:max-w-lg",
+        // Mobile: ancora no bottom, ocupa até 92% da altura, cantos superiores arredondados
+        "bottom-0 left-0 sm:bottom-auto sm:left-[50%]",
+        "sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%]",
+        "rounded-t-2xl sm:rounded-xl",
+        // Altura máxima + scroll interno — funciona em qualquer tamanho
+        "max-h-[92dvh] sm:max-h-[90dvh] overflow-y-auto",
+        // Padding e espaçamento interno
+        "grid gap-4 p-6",
         className
       )}
       {...props}

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import {
   Search, Zap, ClipboardList, CheckCircle2, Clock, XCircle,
   Calendar, MoreHorizontal, ChevronDown, Trash2, Car, Landmark,
+  ChevronLeft, ChevronRight, CalendarDays,
 } from "lucide-react";
 import { useServicesStore } from "@/store/services-store";
 import { useAuthStore } from "@/store/auth-store";
@@ -20,7 +21,7 @@ import { QuickServiceDialog } from "@/components/shared/quick-service-dialog";
 import { AppointmentFormDialog } from "@/components/agenda/appointment-form-dialog";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import { CompleteServiceOrderDialog } from "@/components/ordens-de-servico/complete-service-order-dialog";
-import { apiGetServiceOrders, apiUpdateServiceOrderStatus, apiDeleteServiceOrder, type ApiServiceOrder } from "@/lib/api";
+import { apiUpdateServiceOrderStatus, apiDeleteServiceOrder, type ApiServiceOrder } from "@/lib/api";
 import { formatCurrency, formatDate, appointmentStatusLabel } from "@/lib/utils";
 import type { Appointment, AppointmentStatus, ServiceCategory } from "@/types";
 
@@ -70,6 +71,11 @@ const CATEGORY_COLORS: Record<ServiceCategory, string> = {
   architecture: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
 };
 
+const MONTH_NAMES_OS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const _nowOS = new Date();
+const NOW_YEAR_OS  = _nowOS.getFullYear();
+const NOW_MONTH_OS = _nowOS.getMonth() + 1;
+
 const CATEGORY_TABS: { label: string; value: FilterCategory }[] = [
   { label: "Todos", value: "all" },
   { label: "Automotivo", value: "automotive" },
@@ -94,27 +100,28 @@ const STATUS_ACTIONS: { label: string; value: AppointmentStatus }[] = [
 ];
 
 export default function OrdensDeServicoPage() {
-  const { services, updateStatus, deleteService, setServices } = useServicesStore();
+  const { services, updateStatus, deleteService } = useServicesStore();
   const isEmployee = useAuthStore((s) => s.user?.role === "EMPLOYEE");
   const { token } = useAuthStore();
-
-  useEffect(() => {
-    if (!token) return;
-    apiGetServiceOrders(token)
-      .then((data) => setServices(data.map(mapApiServiceOrder)))
-      .catch(() => {});
-  }, [token]);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [filterCategory, setFilterCategory] = useState<FilterCategory>("all");
+  const [periodoAno, setPeriodoAno] = useState(NOW_YEAR_OS);
+  const [periodoMes, setPeriodoMes] = useState<number | null>(NOW_MONTH_OS);
   const [quickOpen, setQuickOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [editTarget, setEditTarget] = useState<Appointment | null>(null);
   const [completeTarget, setCompleteTarget] = useState<Appointment | null>(null);
 
   // ── Filtros ───────────────────────────────────────────────────────────────
+  const inPeriod = (s: Appointment) =>
+    periodoMes === null
+      ? true
+      : s.date.slice(0, 4) === String(periodoAno) && parseInt(s.date.slice(5, 7)) === periodoMes;
+
   const filtered = services.filter((s) => {
-    const matchStatus = filterStatus === "all" || s.status === filterStatus;
+    const matchPeriod   = inPeriod(s);
+    const matchStatus   = filterStatus === "all" || s.status === filterStatus;
     const matchCategory = filterCategory === "all" || categoryOf(s) === filterCategory;
     const q = search.toLowerCase();
     const matchSearch =
@@ -123,23 +130,38 @@ export default function OrdensDeServicoPage() {
       s.serviceType.toLowerCase().includes(q) ||
       s.employeeName.toLowerCase().includes(q) ||
       s.vehicle.toLowerCase().includes(q);
-    return matchStatus && matchCategory && matchSearch;
+    return matchPeriod && matchStatus && matchCategory && matchSearch;
   });
 
   // ── Contagens ─────────────────────────────────────────────────────────────
+  const periodServices = services.filter(inPeriod);
+
   const counts = {
-    all: services.length,
-    draft: services.filter((s) => s.status === "draft").length,
-    created: services.filter((s) => s.status === "created").length,
-    scheduled: services.filter((s) => s.status === "scheduled").length,
-    in_progress: services.filter((s) => s.status === "in_progress").length,
-    completed: services.filter((s) => s.status === "completed").length,
-    cancelled: services.filter((s) => s.status === "cancelled").length,
+    all: periodServices.length,
+    draft: periodServices.filter((s) => s.status === "draft").length,
+    created: periodServices.filter((s) => s.status === "created").length,
+    scheduled: periodServices.filter((s) => s.status === "scheduled").length,
+    in_progress: periodServices.filter((s) => s.status === "in_progress").length,
+    completed: periodServices.filter((s) => s.status === "completed").length,
+    cancelled: periodServices.filter((s) => s.status === "cancelled").length,
   };
 
-  const completedRevenue = services
+  const completedRevenue = periodServices
     .filter((s) => s.status === "completed")
     .reduce((acc, s) => acc + s.value, 0);
+
+  function prevMesOS() {
+    if (periodoMes === null) { setPeriodoMes(NOW_MONTH_OS); setPeriodoAno(NOW_YEAR_OS); return; }
+    if (periodoMes === 1) { setPeriodoAno(periodoAno - 1); setPeriodoMes(12); }
+    else setPeriodoMes(periodoMes - 1);
+  }
+  function nextMesOS() {
+    if (periodoMes === null) { setPeriodoMes(NOW_MONTH_OS); setPeriodoAno(NOW_YEAR_OS); return; }
+    if (periodoMes === 12) { setPeriodoAno(periodoAno + 1); setPeriodoMes(1); }
+    else setPeriodoMes(periodoMes + 1);
+  }
+  function irParaAtualOS() { setPeriodoMes(NOW_MONTH_OS); setPeriodoAno(NOW_YEAR_OS); }
+  function verTodosOS() { setPeriodoMes(null); }
 
   return (
     <div className="flex flex-col gap-6">
@@ -155,6 +177,38 @@ export default function OrdensDeServicoPage() {
           <Zap className="w-4 h-4" />
           Lançamento Rápido
         </Button>
+      </div>
+
+      {/* Filtro de período */}
+      <div className="flex items-center gap-2">
+        <div className="flex items-center rounded-lg border bg-card overflow-hidden">
+          <button type="button" onClick={prevMesOS} className="px-3 py-2 hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" aria-label="Mês anterior">
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <div className="flex items-center gap-1.5 px-3 py-2 select-none min-w-[160px] justify-center">
+            <CalendarDays className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <span className="text-sm font-medium">
+              {periodoMes !== null
+                ? `${MONTH_NAMES_OS[periodoMes - 1]} ${periodoAno}`
+                : "Todos os períodos"}
+            </span>
+          </div>
+          <button type="button" onClick={nextMesOS} className="px-3 py-2 hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" aria-label="Próximo mês">
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+        {(periodoMes === null || periodoMes !== NOW_MONTH_OS || periodoAno !== NOW_YEAR_OS) && (
+          <button type="button" onClick={irParaAtualOS}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2">
+            Este mês
+          </button>
+        )}
+        {periodoMes !== null && (
+          <button type="button" onClick={verTodosOS}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2">
+            Ver todos
+          </button>
+        )}
       </div>
 
       {/* ── Cards de resumo ──────────────────────────────────────────────── */}

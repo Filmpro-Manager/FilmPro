@@ -61,10 +61,6 @@ export default function EstoquePage() {
     }
   }, [token]);
 
-  useEffect(() => {
-    loadItems();
-  }, [loadItems]);
-
   async function handleDelete() {
     if (!deleteTarget) return;
     try {
@@ -288,7 +284,7 @@ export default function EstoquePage() {
               </span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {(["all", "automotive", "architecture", "security", "decorative", "solar"] as const).map((t) => (
+              {(["all", "adesivo", "pelicula", "ppf"] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => setFilterType(t)}

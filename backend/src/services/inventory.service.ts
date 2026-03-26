@@ -13,7 +13,9 @@ const itemSelect = {
   costPrice: true,
   pricePerUnit: true,
   transparency: true,
+  color: true,
   sku: true,
+  rollWidth: true,
   createdAt: true,
   updatedAt: true,
   createdBy: {
@@ -49,7 +51,9 @@ export interface CreateItemInput {
   costPrice?: number;
   pricePerUnit?: number;
   transparency?: number;
+  color?: string;
   sku?: string;
+  rollWidth?: number;
 }
 
 export interface UpdateItemInput {
@@ -61,7 +65,9 @@ export interface UpdateItemInput {
   costPrice?: number;
   pricePerUnit?: number;
   transparency?: number;
+  color?: string;
   sku?: string;
+  rollWidth?: number;
 }
 
 export interface CreateMovementInput {
@@ -106,7 +112,9 @@ export async function createItem(input: CreateItemInput) {
         costPrice: input.costPrice ?? 0,
         pricePerUnit: input.pricePerUnit ?? 0,
         transparency: input.transparency ?? 0,
+        color: input.color ?? null,
         sku: input.sku,
+        rollWidth: input.rollWidth,
         createdById: input.userId,
       } satisfies Prisma.InventoryItemUncheckedCreateInput,
       select: itemSelect,
@@ -144,7 +152,9 @@ export async function updateItem(id: string, storeId: string, input: UpdateItemI
         ...(input.costPrice !== undefined && { costPrice: input.costPrice }),
         ...(input.pricePerUnit !== undefined && { pricePerUnit: input.pricePerUnit }),
         ...(input.transparency !== undefined && { transparency: input.transparency }),
+        ...(input.color !== undefined && { color: input.color }),
         ...(input.sku !== undefined && { sku: input.sku }),
+        ...(input.rollWidth !== undefined && { rollWidth: input.rollWidth }),
       },
     });
   } catch (err) {

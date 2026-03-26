@@ -15,7 +15,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
-import { apiGetServices, apiToggleService, apiDeleteService } from "@/lib/api";
+import { apiToggleService, apiDeleteService } from "@/lib/api";
 import { toast } from "sonner";
 import { usePathname } from "next/navigation";
 
@@ -38,7 +38,7 @@ const CATEGORY_COLOR: Record<ServiceCategory, string> = {
 type CategoryFilter = ServiceCategory | "all";
 
 export default function ServicosPage() {
-  const { services, setServices, updateService, deleteItem } = useServiceCatalogStore();
+  const { services, updateService, deleteItem } = useServiceCatalogStore();
   const { token } = useAuthStore();
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<CategoryFilter>("all");
@@ -55,22 +55,6 @@ export default function ServicosPage() {
     if (pathnameRef.current !== pathname) exitSelectMode();
     pathnameRef.current = pathname;
   }, [pathname]);
-
-  useEffect(() => {
-    if (!token) return;
-    apiGetServices(token)
-      .then((data) =>
-        setServices(
-          data.map((s) => ({
-            ...s,
-            category: s.category as ServiceCategory,
-            description: s.description ?? undefined,
-            estimatedMinutes: s.estimatedMinutes ?? undefined,
-          }))
-        )
-      )
-      .catch(() => toast.error("Erro ao carregar serviços"));
-  }, [token]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();

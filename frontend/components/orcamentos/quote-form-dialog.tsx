@@ -78,11 +78,9 @@ const PAYMENT_METHODS = [
 ];
 
 const FILM_TYPE_LABELS: Record<string, string> = {
-  automotive: "Automotiva",
-  architecture: "Arquitetônica",
-  security: "Segurança",
-  decorative: "Decorativa",
-  solar: "Solar",
+  adesivo: "Adesivo",
+  pelicula: "Película",
+  ppf: "PPF",
 };
 
 const CATEGORY_OPTIONS: {
@@ -728,16 +726,13 @@ export function QuoteFormDialog({
             <Separator />
 
             {/* ── 4. Serviços ── */}
-            <section>
+            <section className="space-y-3">
               <SectionTitle>Serviços</SectionTitle>
+
+              {/* Select */}
               <div>
-                <Label className="text-xs mb-1.5 block">
-                  Selecionar do catálogo
-                </Label>
-                <Select
-                  value={previewServiceId}
-                  onValueChange={(id) => handleAddService(id)}
-                >
+                <Label className="text-xs mb-1.5 block">Selecionar do catálogo</Label>
+                <Select value={previewServiceId} onValueChange={(id) => handleAddService(id)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Escolha um serviço..." />
                   </SelectTrigger>
@@ -757,7 +752,91 @@ export function QuoteFormDialog({
                 </Select>
               </div>
 
-
+              {/* Serviços já adicionados */}
+              {errors.itemsService && (
+                <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                  {errors.itemsService}
+                </div>
+              )}
+              {items.filter((it) => it.type === "service").length > 0 && (
+                <div className="space-y-2">
+                  {items
+                    .filter((it) => it.type === "service")
+                    .map((item) => (
+                      <div key={item.id} className="rounded-xl border bg-card p-3 space-y-3">
+                        {/* Nome + remover */}
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs shrink-0 bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-300/40">
+                            Serviço
+                          </Badge>
+                          <span className="text-sm font-medium flex-1 leading-tight">{item.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeItemRow(item.id)}
+                            className="text-muted-foreground hover:text-destructive transition-colors shrink-0 p-1 rounded"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                        {item.description && (
+                          <p className="text-xs text-muted-foreground pl-1 -mt-1">{item.description}</p>
+                        )}
+                        {/* Preço / desconto / total */}
+                        <div className="grid grid-cols-12 gap-2 items-end">
+                          <div className="col-span-4">
+                            <Label className="text-xs">Preço unit.</Label>
+                            <Input
+                              className="h-8 text-sm text-right"
+                              value={priceDisplays[item.id] ?? ""}
+                              onChange={(e) =>
+                                updateItemPrice(item.id, maskCurrency(e.target.value.replace(/\D/g, "")))
+                              }
+                              placeholder="R$ 0,00"
+                            />
+                          </div>
+                          <div className="col-span-5">
+                            <Label className="text-xs">Desconto</Label>
+                            <div className="flex gap-1">
+                              <Select
+                                value={item.discountType}
+                                onValueChange={(v) => updateItem(item.id, "discountType", v as QuoteDiscountType)}
+                              >
+                                <SelectTrigger className="h-8 w-14 text-xs px-2">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="value">R$</SelectItem>
+                                  <SelectItem value="percent">%</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Input
+                                className="h-8 text-sm text-right flex-1"
+                                value={discountDisplays[item.id] ?? ""}
+                                onChange={(e) => {
+                                  const raw = e.target.value;
+                                  updateItemDiscount(
+                                    item.id,
+                                    item.discountType === "percent"
+                                      ? raw.replace(/[^\d.,]/g, "")
+                                      : maskCurrency(raw.replace(/\D/g, ""))
+                                  );
+                                }}
+                                placeholder={item.discountType === "percent" ? "0" : "R$ 0,00"}
+                              />
+                            </div>
+                          </div>
+                          <div className="col-span-3 text-right">
+                            <Label className="text-xs text-muted-foreground">Total</Label>
+                            <p className="text-sm font-bold text-primary mt-1">
+                              {maskCurrency(String(Math.round(calcItemTotal(item) * 100)))}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
             </section>
 
             <Separator />
@@ -880,32 +959,22 @@ export function QuoteFormDialog({
 
             <Separator />
 
-            {/* ── 6. Itens adicionados ── */}
+            {/* ── 6. Películas adicionadas ── */}
             <section>
-              <SectionTitle>Itens do Orçamento</SectionTitle>
-              {(errors.itemsService || errors.itemsProduct) && (
-                <div className="space-y-1.5 mb-3">
-                  {errors.itemsService && (
-                    <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
-                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                      {errors.itemsService}
-                    </div>
-                  )}
-                  {errors.itemsProduct && (
-                    <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
-                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                      {errors.itemsProduct}
-                    </div>
-                  )}
+              <SectionTitle>Películas Adicionadas</SectionTitle>
+              {errors.itemsProduct && (
+                <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive mb-3">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                  {errors.itemsProduct}
                 </div>
               )}
-              {items.length === 0 ? (
+              {items.filter((it) => it.type !== "service").length === 0 ? (
                 <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-                  Nenhum item adicionado. Selecione um serviço ou película acima.
+                  Nenhuma película adicionada. Selecione uma película acima.
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {items.map((item) => (
+                  {items.filter((it) => it.type !== "service").map((item) => (
                     <div
                       key={item.id}
                       className="rounded-xl border bg-card p-3 space-y-3"

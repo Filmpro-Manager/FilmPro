@@ -100,13 +100,14 @@ export const clientSchema = z.object({
 export const productSchema = z.object({
   brand: z.string().min(1, "Marca obrigatória"),
   model: z.string().min(1, "Modelo obrigatório"),
-  type: z.enum(["automotive", "architecture", "security", "decorative", "solar"], {
+  type: z.enum(["adesivo", "pelicula", "ppf"], {
     error: "Selecione um tipo",
   }),
   transparency: z
-    .number({ error: "Transparência obrigatória" })
+    .number()
     .min(1, "Transparência mínima 1%")
-    .max(100, "Transparência máxima 100%"),
+    .max(100, "Transparência máxima 100%")
+    .optional(),
   availableMeters: z
     .number({ error: "Quantidade obrigatória" })
     .min(0, "Valor não pode ser negativo"),
@@ -121,12 +122,28 @@ export const productSchema = z.object({
     .min(0, "Valor não pode ser negativo"),
   supplier: z.string().optional(),
   sku: z.string().optional(),
+  rollWidth: z.number().positive("Largura deve ser maior que zero").optional(),
+  color: z.string().optional(),
 }).superRefine((data, ctx) => {
   if (data.minimumStock > data.availableMeters) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: "Estoque mínimo não pode ser maior que o estoque atual",
       path: ["minimumStock"],
+    });
+  }
+  if ((data.type === "pelicula" || data.type === "ppf") && (data.transparency === undefined || data.transparency === null)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Transparência obrigatória",
+      path: ["transparency"],
+    });
+  }
+  if (data.type === "adesivo" && !data.color) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Cor obrigatória para adesivo",
+      path: ["color"],
     });
   }
 });

@@ -43,13 +43,13 @@ function calcFinanceiro(transactions: Transaction[], from: string, to: string) {
   const lucro    = receita - despesas;
   const margem   = receita > 0 ? (lucro / receita) * 100 : 0;
 
-  // Caixa: saldo real de tudo que foi efetivamente pago
-  const caixaRec = transactions.filter((t) => t.type === "income"  && t.isPaid).reduce((acc, t) => acc + t.amount, 0);
-  const caixaPag = transactions.filter((t) => t.type === "expense" && t.isPaid).reduce((acc, t) => acc + t.amount, 0);
+  // Caixa: saldo real do que foi efetivamente pago no período
+  const caixaRec = inRange.filter((t) => t.type === "income"  && t.isPaid).reduce((acc, t) => acc + t.amount, 0);
+  const caixaPag = inRange.filter((t) => t.type === "expense" && t.isPaid).reduce((acc, t) => acc + t.amount, 0);
   const caixa    = caixaRec - caixaPag;
 
-  const aReceber = transactions.filter((t) => t.type === "income"  && !t.isPaid).reduce((acc, t) => acc + t.amount, 0);
-  const aPagar   = transactions.filter((t) => t.type === "expense" && !t.isPaid).reduce((acc, t) => acc + t.amount, 0);
+  const aReceber = inRange.filter((t) => t.type === "income"  && !t.isPaid).reduce((acc, t) => acc + t.amount, 0);
+  const aPagar   = inRange.filter((t) => t.type === "expense" && !t.isPaid).reduce((acc, t) => acc + t.amount, 0);
 
   return { receita, despesas, lucro, margem, caixa, aReceber, aPagar };
 }

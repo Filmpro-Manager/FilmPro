@@ -12,7 +12,7 @@ import { ClientDetailDialog } from "@/components/clientes/client-detail-dialog";
 import { ClientCsvImportDialog } from "@/components/clientes/client-csv-import-dialog";
 import { useClientsStore } from "@/store/clients-store";
 import { useAuthStore } from "@/store/auth-store";
-import { apiGetClients, apiDeleteClient, type ApiClient } from "@/lib/api";
+import { apiDeleteClient } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import type { Client } from "@/types";
 import { cn } from "@/lib/utils";
@@ -22,7 +22,7 @@ import {
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import { toast } from "sonner";
 
-function mapApiClient(api: ApiClient): Client {
+function _mapApiClient_unused(api: { vehicles: { id: string; brand: string; model: string; year?: number | null; plate?: string | null; color?: string | null }[]; id: string; name: string; phone?: string | null; email?: string | null; document?: string | null; notes?: string | null; addressZipcode?: string | null; addressStreet?: string | null; addressNumber?: string | null; addressComplement?: string | null; addressDistrict?: string | null; addressCity?: string | null; addressState?: string | null; createdAt: string }): Client {
   const firstVehicle = api.vehicles[0];
   return {
     id: api.id,
@@ -63,11 +63,9 @@ export default function ClientesPage() {
   const [openImport, setOpenImport]         = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [editTarget, setEditTarget]         = useState<Client | null>(null);
-  const [loading, setLoading]               = useState(true);
   const [selectMode, setSelectMode]         = useState(false);
   const [selectedIds, setSelectedIds]       = useState<Set<string>>(new Set());
   const clients           = useClientsStore((s) => s.clients);
-  const setClients        = useClientsStore((s) => s.setClients);
   const deleteClientStore = useClientsStore((s) => s.deleteClient);
   const { token }         = useAuthStore();
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -81,14 +79,6 @@ export default function ClientesPage() {
     }
     pathnameRef.current = pathname;
   }, [pathname]);
-
-  useEffect(() => {
-    if (!token) return;
-    apiGetClients(token)
-      .then((data) => setClients(data.map(mapApiClient)))
-      .catch(() => toast.error("Erro ao carregar clientes"))
-      .finally(() => setLoading(false));
-  }, [token]);
 
   async function handleDelete(id: string) {
     if (!token) return;
@@ -182,14 +172,6 @@ export default function ClientesPage() {
       `${toExport.length} ${toExport.length === 1 ? "cliente exportado" : "clientes exportados"}`
     );
     exitSelectMode();
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24 text-muted-foreground text-sm">
-        Carregando clientes...
-      </div>
-    );
   }
 
   return (
