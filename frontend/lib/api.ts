@@ -1264,4 +1264,27 @@ export async function apiDeleteRating(id: string, token: string): Promise<void> 
   }
 }
 
+// ─── Subscription ─────────────────────────────────────────────────────────────
+
+import type { SubscriptionInfo, PixCharge } from '@/types';
+
+export async function apiGetSubscriptionInfo(token: string): Promise<SubscriptionInfo> {
+  const res = await fetch(`${BASE_URL}/subscription/info`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Erro ao buscar informações da assinatura');
+  return data as SubscriptionInfo;
+}
+
+export async function apiCreatePixCharge(token: string): Promise<PixCharge> {
+  const res = await fetch(`${BASE_URL}/subscription/charge`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Erro ao gerar cobrança PIX');
+  return data as PixCharge;
+}
+
 

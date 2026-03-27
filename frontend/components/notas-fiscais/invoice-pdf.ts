@@ -1,4 +1,6 @@
-import type { Invoice, CompanySettings, Client } from "@/types";
+// Módulo removido
+export {};
+
 import { formatCurrency } from "@/lib/utils";
 
 type RGB = [number, number, number];

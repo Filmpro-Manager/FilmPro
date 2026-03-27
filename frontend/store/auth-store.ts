@@ -17,11 +17,13 @@ interface AuthStore {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  subscriptionStatus: string | null;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   hasRole: (...roles: string[]) => boolean;
   setActiveStore: (storeId: string) => void;
   setToken: (token: string) => void;
+  setSubscriptionStatus: (status: string) => void;
   updateUserProfile: (data: UpdateProfileData) => Promise<{ success: boolean; error?: string }>;
 }
 
@@ -31,6 +33,7 @@ export const useAuthStore = create<AuthStore>()(
       user: null,
       token: null,
       isAuthenticated: false,
+      subscriptionStatus: null,
 
       login: async (email, password) => {
         try {
@@ -71,6 +74,10 @@ export const useAuthStore = create<AuthStore>()(
       setToken: (token) => {
         set({ token });
         setTokenCookie(token);
+      },
+
+      setSubscriptionStatus: (status) => {
+        set({ subscriptionStatus: status });
       },
 
       updateUserProfile: async (data) => {

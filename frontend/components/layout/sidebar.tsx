@@ -9,7 +9,6 @@ import {
   CalendarDays,
   ClipboardList,
   TrendingUp,
-  FileText,
   UserCog,
   PanelLeftClose,
   PanelLeftOpen,
@@ -47,7 +46,6 @@ const navGroups: NavGroup[] = [
       { label: "Dashboard",     href: "/dashboard",     icon: LayoutDashboard },
       { label: "Clientes",      href: "/clientes",      icon: Users },
       { label: "Financeiro",    href: "/financeiro",    icon: TrendingUp,  roles: ["OWNER", "MANAGER"] },
-      { label: "Notas Fiscais", href: "/notas-fiscais", icon: FileText,    roles: ["OWNER", "MANAGER"] },
     ],
   },
   {

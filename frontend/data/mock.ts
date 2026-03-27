@@ -5,7 +5,6 @@ import type {
   Employee,
   Appointment,
   Transaction,
-  Invoice,
   DashboardStats,
   StockMovement,
   ServiceCatalog,
@@ -1137,65 +1136,6 @@ export const mockTransactions: Transaction[] = [
     date: "2025-09-20",
     category: "Compra de Material",
     paymentMethod: "Boleto",
-  },
-];
-
-export const mockInvoices: Invoice[] = [
-  {
-    id: "i1",
-    number: "NF-000123",
-    clientId: "c4",
-    clientName: "Lucas Ferreira",
-    issueDate: "2026-02-20",
-    value: 650,
-    items: [
-      {
-        id: "ii1",
-        description: "Insulfilm G20 — VW Golf GTI (serviço completo)",
-        quantity: 1,
-        unitPrice: 650,
-        total: 650,
-      },
-    ],
-    status: "paid",
-    fileType: "pdf",
-  },
-  {
-    id: "i2",
-    number: "NF-000124",
-    clientId: "c3",
-    clientName: "Nova Construção LTDA",
-    issueDate: "2026-02-23",
-    value: 3200,
-    items: [
-      {
-        id: "ii2",
-        description: "Película Solar Residencial — 3 ambientes (sala, quarto 1, quarto 2)",
-        quantity: 3,
-        unitPrice: 1066.67,
-        total: 3200,
-      },
-    ],
-    status: "paid",
-    fileType: "xml",
-  },
-  {
-    id: "i3",
-    number: "NF-000125",
-    clientId: "c5",
-    clientName: "Patrícia Souza",
-    issueDate: "2026-02-25",
-    value: 560,
-    items: [
-      {
-        id: "ii3",
-        description: "Insulfilm Automotivo Completo — Chevrolet Tracker",
-        quantity: 1,
-        unitPrice: 560,
-        total: 560,
-      },
-    ],
-    status: "pending",
   },
 ];
 

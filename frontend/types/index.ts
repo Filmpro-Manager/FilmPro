@@ -389,28 +389,41 @@ export interface Alert {
   createdAt: string;
 }
 
-// ─── Invoices ─────────────────────────────────────────────────────────────────
+// ─── Subscription / PIX ──────────────────────────────────────────────────────
 
-export interface Invoice {
+export interface PixCharge {
   id: string;
-  number: string;
-  clientId: string;
-  clientName: string;
-  issueDate: string;
-  value: number;
-  items: InvoiceItem[];
-  fileUrl?: string;
-  fileType?: "xml" | "pdf";
-  status: "pending" | "paid" | "cancelled" | "issued";
-  key?: string;
+  subscriptionId: string;
+  correlationId: string;
+  externalId: string | null;
+  amount: number;
+  storeCount: number;
+  referenceMonth: string;
+  status: string;
+  brCode: string | null;
+  qrCodeImage: string | null;
+  expiresAt: string;
+  paidAt: string | null;
+  createdAt: string;
 }
 
-export interface InvoiceItem {
+export interface Subscription {
   id: string;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-  total: number;
+  companyId: string;
+  status: string;
+  pricePerStore: number;
+  dueDate: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SubscriptionInfo {
+  subscription: Subscription;
+  company: { name: string; email: string; phone?: string | null } | null;
+  storeCount: number;
+  monthlyAmount: number;
+  pendingCharge: PixCharge | null;
+  charges: PixCharge[];
 }
 
 // ─── Service Catalog ─────────────────────────────────────────────────────────
