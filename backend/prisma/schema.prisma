@@ -21,8 +21,9 @@ model Company {
   status    String   @default("active")
   createdAt DateTime @default(now()) @map("created_at")
 
-  stores    Store[]
-  users     User[]
+  stores       Store[]
+  users        User[]
+  subscription Subscription?
 
   @@map("companies")
 }
@@ -535,5 +536,49 @@ model ClientRating {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("client_ratings")
+}
+
+// ─────────────────────────────────────────
+// SUBSCRIPTION (Assinatura)
+// ─────────────────────────────────────────
+model Subscription {
+  id            String   @id @default(uuid())
+  companyId     String   @unique @map("company_id")
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  status        String   @default("active")
+  pricePerStore Int      @default(7990) @map("price_per_store")
+  dueDate       DateTime @map("due_date")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  charges PixCharge[]
+
+  @@map("subscriptions")
+}
+
+// ─────────────────────────────────────────
+// PIX CHARGE (Cobrança PIX)
+// ─────────────────────────────────────────
+model PixCharge {
+  id             String   @id @default(uuid())
+  subscriptionId String   @map("subscription_id")
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  correlationId  String   @unique @map("correlation_id")
+  externalId     String?  @map("external_id")
+  amount         Int
+  storeCount     Int      @map("store_count")
+  referenceMonth String   @map("reference_month")
+  status         String   @default("pending")
+  brCode         String?  @map("br_code")
+  qrCodeImage    String?  @map("qr_code_image")
+  expiresAt      DateTime @map("expires_at")
+  paidAt         DateTime? @map("paid_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("pix_charges")
 }
 
