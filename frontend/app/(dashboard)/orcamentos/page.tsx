@@ -430,7 +430,7 @@ export default function OrcamentosPage() {
 
                 {/* Corpo */}
                 <div className="p-4 space-y-4">
-                  {/* Categoria */
+                  {/* Categoria */}
                   <div className="space-y-1">
                     <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Categoria</label>
                     <Select value={filterCategory} onValueChange={setFilterCategory}>
