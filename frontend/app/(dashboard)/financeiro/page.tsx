@@ -38,7 +38,7 @@ const PAY_BADGE: Record<PayStatus, { label: string; className: string }> = {
   pending: { label: "A Receber",  className: "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400" },
 };
 
-function mapApiTransaction(api: ApiTransaction): Transaction {
+function mapApiTransaction(api: Transaction): Transaction {
   return {
     id: api.id,
     type: api.type as "income" | "expense",
