@@ -69,6 +69,10 @@ const MONTHS = [
   "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro",
 ];
 
+const _nowOrc = new Date();
+const NOW_MONTH_ORC = _nowOrc.getMonth() + 1;
+const NOW_YEAR_ORC  = _nowOrc.getFullYear();
+
 type SortKey = "date_desc" | "date_asc" | "value_desc" | "value_asc" | "client_asc" | "client_desc";
 
 const SORT_LABELS: Record<SortKey, string> = {
@@ -239,7 +243,7 @@ export default function OrcamentosPage() {
       header: "Categoria",
       render: (row) => (
         <span className="text-xs text-muted-foreground">
-          {row.category === "automotive" ? "Automotivo" : row.category === "residential" ? "Residencial" : "—"}
+          {row.category === "automotive" ? "Automotivo" : row.category === "architecture" ? "Arquitetura" : "—"}
         </span>
       ),
     },

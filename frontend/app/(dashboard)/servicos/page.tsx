@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useState, useEffect, useRef } from "react";
 import { Plus, Pencil, Power, PowerOff, Car, Landmark, Trash2, Download, Upload, Square, CheckSquare } from "lucide-react";

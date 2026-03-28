@@ -163,9 +163,8 @@ export function generateQuotePDF(quote: Quote, company: CompanySettings): void {
     const subRows: string[] = [];
     if (sub) {
       subLabel =
-        sub.type === "vehicle"    ? "Veículo" :
-        sub.type === "residence"  ? "Residência" :
-        sub.type === "commercial" ? "Imóvel Comercial" : "Objeto";
+        sub.type === "vehicle"  ? "Veículo" :
+        sub.type === "building" ? "Imóvel" : "Objeto";
       if (sub.brand || sub.model) subRows.push([sub.brand, sub.model].filter(Boolean).join(" "));
       if (sub.year)        subRows.push(`Ano ${sub.year}`);
       if (sub.plate)       subRows.push(`Placa ${sub.plate.toUpperCase()}`);

@@ -91,7 +91,7 @@ export const useAuthStore = create<AuthStore>()(
                   ...state.user,
                   name: updated.name,
                   phone: updated.phone,
-                  avatar: updated.avatarUrl ?? null,
+                  avatar: updated.avatarUrl ?? undefined,
                 }
               : null,
           }));

@@ -22,9 +22,7 @@ import { toast } from "sonner";
 const schema = z.object({
   inventoryItemId: z.string().min(1, "Selecione uma película"),
   type: z.enum(["entrada", "saida"], { error: "Selecione o tipo de movimentação" }),
-  quantity: z.coerce
-    .number({ error: "Informe uma quantidade válida" })
-    .positive("A quantidade deve ser maior que zero"),
+  quantity: z.number().positive("A quantidade deve ser maior que zero"),
   reason: z.string().min(1, "O motivo é obrigatório"),
 });
 
@@ -149,7 +147,7 @@ export function StockMovementDialog({ open, onOpenChange }: StockMovementDialogP
                 step="0.1"
                 min="0.1"
                 placeholder="5.0"
-                {...register("quantity")}
+                {...register("quantity", { valueAsNumber: true })}
               />
             </FormField>
           </div>
