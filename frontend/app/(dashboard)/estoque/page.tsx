@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { Plus, AlertTriangle, Trash2, Filter } from "lucide-react";
+import { Plus, AlertTriangle, Trash2, Filter, Banknote, TrendingUp, Package } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/shared/data-table";
 import { ProductFormDialog } from "@/components/estoque/product-form-dialog";
 import { StockMovementDialog } from "@/components/estoque/stock-movement-dialog";
@@ -70,6 +71,13 @@ export default function EstoquePage() {
       toast.error("Erro ao excluir item");
     }
   }
+
+  const stockSummary = useMemo(() => {
+    const totalCost  = products.reduce((acc, p) => acc + p.availableMeters * p.costPrice, 0);
+    const totalSell  = products.reduce((acc, p) => acc + p.availableMeters * p.pricePerMeter, 0);
+    const belowMin   = products.filter((p) => p.availableMeters < p.minimumStock).length;
+    return { totalCost, totalSell, belowMin };
+  }, [products]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -254,6 +262,50 @@ export default function EstoquePage() {
           Nova Película
         </Button>
       </PageHeader>
+
+      {/* Cards de resumo financeiro */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="flex items-center gap-4 py-4">
+            <div className="rounded-lg bg-primary/10 p-2.5">
+              <Banknote className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Valor em estoque (custo)</p>
+              <p className="text-lg font-bold text-foreground">{formatCurrency(stockSummary.totalCost)}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex items-center gap-4 py-4">
+            <div className="rounded-lg bg-emerald-500/10 p-2.5">
+              <TrendingUp className="h-5 w-5 text-emerald-500" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Valor em estoque (venda)</p>
+              <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(stockSummary.totalSell)}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex items-center gap-4 py-4">
+            <div className={cn("rounded-lg p-2.5", stockSummary.belowMin > 0 ? "bg-amber-500/10" : "bg-muted/60")}>
+              <Package className={cn("h-5 w-5", stockSummary.belowMin > 0 ? "text-amber-500" : "text-muted-foreground")} />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Produtos</p>
+              <p className="text-lg font-bold text-foreground">
+                {products.length}
+                {stockSummary.belowMin > 0 && (
+                  <span className="ml-2 text-xs font-medium text-amber-500">{stockSummary.belowMin} abaixo do mínimo</span>
+                )}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <Tabs defaultValue="products" onValueChange={(v) => { if (v === "movements") loadMovements(); }}>
         <TabsList>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Package, AlertTriangle, CircleOff } from "lucide-react";
+import { Package, AlertTriangle, CircleOff, Banknote } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn, formatCurrency } from "@/lib/utils";
 import type { Product, Appointment } from "@/types";
@@ -18,6 +18,9 @@ export function DashEstoque({ products, services, filter }: Props) {
     const belowMin  = products.filter((p) => p.availableMeters < p.minimumStock);
     const critical  = products.filter((p) => p.availableMeters === 0);
 
+    // Valor total imobilizado em estoque (metros disponíveis × custo por metro)
+    const stockValue = products.reduce((acc, p) => acc + p.availableMeters * p.costPrice, 0);
+
     // Custo total de material consumido no período
     const materialCost = services
       .filter((s) => s.date >= filter.from && s.date <= filter.to && s.status === "completed")
@@ -29,7 +32,7 @@ export function DashEstoque({ products, services, filter }: Props) {
 
     const marginImpact = totalRevenue > 0 ? (materialCost / totalRevenue) * 100 : 0;
 
-    return { belowMin, critical, materialCost, marginImpact, totalProducts: products.length };
+    return { belowMin, critical, materialCost, marginImpact, stockValue, totalProducts: products.length };
   }, [products, services, filter]);
 
   return (
@@ -63,6 +66,15 @@ export function DashEstoque({ products, services, filter }: Props) {
               </p>
               <p className="text-[10px] text-muted-foreground mt-0.5 leading-none">Zerados</p>
             </div>
+          </div>
+        </div>
+
+        {/* Valor imobilizado em estoque */}
+        <div className="flex items-center gap-2.5 rounded-lg bg-primary/10 p-2.5">
+          <Banknote className="w-5 h-5 shrink-0 text-primary" />
+          <div className="flex-1 flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Valor em estoque</p>
+            <p className="text-sm font-bold text-primary">{formatCurrency(stats.stockValue)}</p>
           </div>
         </div>
 
