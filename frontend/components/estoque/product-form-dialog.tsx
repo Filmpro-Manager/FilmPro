@@ -123,8 +123,8 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
       setCostDisplay(maskCurrency(String(Math.round(product.costPrice * 100))));
       setPriceDisplay(maskCurrency(String(Math.round(product.pricePerMeter * 100))));
       setTransparencyDisplay(product.transparency != null ? String(product.transparency) : "");
-      setMetersDisplay(maskDecimal(String(Math.round(product.availableMeters * 10)), 1));
-      setMinStockDisplay(maskDecimal(String(Math.round(product.minimumStock * 10)), 1));
+      setMetersDisplay(maskDecimal(String(Math.round(product.availableMeters * 100)), 2));
+      setMinStockDisplay(maskDecimal(String(Math.round(product.minimumStock * 100)), 2));
       setRollWidthDisplay(product.rollWidth != null ? maskDecimal(String(Math.round(product.rollWidth * 100))) : "");
     } else {
       reset({ type: "pelicula" });
@@ -146,8 +146,8 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
     const rw = rollWidth ?? 0;
     if (sq > 0 && rw > 0) {
       const linear = sq / rw;
-      const rounded = Math.round(linear * 10) / 10;
-      setMetersDisplay(maskDecimal(String(Math.round(rounded * 10)), 1));
+      const rounded = Math.round(linear * 100) / 100;
+      setMetersDisplay(maskDecimal(String(Math.round(rounded * 100)), 2));
       setValue("availableMeters", rounded, { shouldValidate: true });
     } else {
       setMetersDisplay("");
@@ -236,7 +236,7 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
     ? (linearNum * rw).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : "—";
   const calcLinearFromM2 = rw > 0 && squareNum > 0
-    ? (squareNum / rw).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+    ? (squareNum / rw).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : "—";
 
   return (
@@ -378,10 +378,10 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
                       <Input
                         id="availableMeters"
                         inputMode="numeric"
-                        placeholder="50,0"
+                        placeholder="50,00"
                         className="pr-8"
                         value={metersDisplay}
-                        onChange={(e) => handleDecimalField(e.target.value, setMetersDisplay, "availableMeters", 1)}
+                        onChange={(e) => handleDecimalField(e.target.value, setMetersDisplay, "availableMeters", 2)}
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground pointer-events-none">m</span>
                     </div>
@@ -475,10 +475,10 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
                 <Input
                   id="minimumStock"
                   inputMode="numeric"
-                  placeholder="20,0"
+                  placeholder="20,00"
                   className="pr-8"
                   value={minStockDisplay}
-                  onChange={(e) => handleDecimalField(e.target.value, setMinStockDisplay, "minimumStock", 1)}
+                  onChange={(e) => handleDecimalField(e.target.value, setMinStockDisplay, "minimumStock", 2)}
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground pointer-events-none">m</span>
               </div>
