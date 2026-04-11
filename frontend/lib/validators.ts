@@ -125,13 +125,6 @@ export const productSchema = z.object({
   rollWidth: z.number().positive("Largura deve ser maior que zero").optional(),
   color: z.string().optional(),
 }).superRefine((data, ctx) => {
-  if (data.minimumStock > data.availableMeters) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Estoque mínimo não pode ser maior que o estoque atual",
-      path: ["minimumStock"],
-    });
-  }
   if ((data.type === "pelicula" || data.type === "ppf") && (data.transparency === undefined || data.transparency === null)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
