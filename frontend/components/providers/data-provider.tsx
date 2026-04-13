@@ -7,7 +7,7 @@
  * abrir para buscar.
  */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/auth-store";
 import { useClientsStore } from "@/store/clients-store";
 import { useProductsStore, mapApiItemToProduct } from "@/store/products-store";
@@ -255,6 +255,7 @@ function mapApiQuote(api: ApiQuote): Quote {
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const { token } = useAuthStore();
+  const hasHydrated = useAuthStore((s) => s._hasHydrated);
   const setClients = useClientsStore((s) => s.setClients);
   const setProducts = useProductsStore((s) => s.setProducts);
   const setServiceCatalog = useServiceCatalogStore((s) => s.setServices);
@@ -265,9 +266,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const setGoals = useGoalsStore((s) => s.setGoals);
   const setRatings = useRatingsStore((s) => s.setRatings);
   const setUsers = useUsersStore((s) => s.setUsers);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!token) return;
+    if (!hasHydrated || !token) return;
 
     Promise.allSettled([
       apiGetClients(token).then((data) => setClients(data.map(mapApiClient))),
@@ -305,9 +307,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       apiGetGoals(token).then((data) => setGoals(data.map(mapApiGoal))),
 
       apiGetRatings(token).then((data) => setRatings(data.map(mapApiRating))),
-    ]);
+    ]).finally(() => setReady(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, hasHydrated]);
+
+  if (!ready) {
+    return (
+      <div className="flex flex-col gap-6 p-4 sm:p-6">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="rounded-lg border border-border bg-muted/30 animate-pulse h-24" />
+        ))}
+      </div>
+    );
+  }
 
   return <>{children}</>;
 }
