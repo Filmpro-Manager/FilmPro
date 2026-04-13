@@ -254,7 +254,8 @@ function mapApiQuote(api: ApiQuote): Quote {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
-  const { token } = useAuthStore();
+  const token = useAuthStore((s) => s.token);
+  const hasHydrated = useAuthStore((s) => s._hasHydrated);
   const setClients = useClientsStore((s) => s.setClients);
   const setProducts = useProductsStore((s) => s.setProducts);
   const setServiceCatalog = useServiceCatalogStore((s) => s.setServices);
@@ -267,7 +268,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const setUsers = useUsersStore((s) => s.setUsers);
 
   useEffect(() => {
-    if (!token) return;
+    if (!hasHydrated || !token) return;
 
     Promise.allSettled([
       apiGetClients(token).then((data) => setClients(data.map(mapApiClient))),
@@ -307,7 +308,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       apiGetRatings(token).then((data) => setRatings(data.map(mapApiRating))),
     ]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, hasHydrated]);
 
   return <>{children}</>;
 }
