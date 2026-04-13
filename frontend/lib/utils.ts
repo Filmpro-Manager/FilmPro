@@ -22,7 +22,9 @@ export function localToday(): string {
 }
 
 export function formatDate(date: string | Date, pattern = "dd/MM/yyyy"): string {
-  const d = typeof date === "string" ? new Date(date) : date;
+  const d = typeof date === "string"
+    ? new Date(date.length === 10 ? `${date}T00:00:00` : date)
+    : date;
   return format(d, pattern, { locale: ptBR });
 }
 
