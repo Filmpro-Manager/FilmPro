@@ -21,7 +21,7 @@ import { QuickServiceDialog } from "@/components/shared/quick-service-dialog";
 import { AppointmentFormDialog } from "@/components/agenda/appointment-form-dialog";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import { CompleteServiceOrderDialog } from "@/components/ordens-de-servico/complete-service-order-dialog";
-import { apiUpdateServiceOrderStatus, apiDeleteServiceOrder, type ApiServiceOrder } from "@/lib/api";
+import { apiGetServiceOrders, apiUpdateServiceOrderStatus, apiDeleteServiceOrder, type ApiServiceOrder } from "@/lib/api";
 import { formatCurrency, formatDate, appointmentStatusLabel } from "@/lib/utils";
 import type { Appointment, AppointmentStatus, ServiceCategory } from "@/types";
 
@@ -104,6 +104,7 @@ const STATUS_ACTIONS: { label: string; value: AppointmentStatus }[] = [
 
 export default function OrdensDeServicoPage() {
   const { services, updateStatus, deleteService } = useServicesStore();
+  const setServices = useServicesStore((s) => s.setServices);
   const isEmployee = useAuthStore((s) => s.user?.role === "EMPLOYEE");
   const { token } = useAuthStore();
   const [search, setSearch] = useState("");
@@ -115,6 +116,13 @@ export default function OrdensDeServicoPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [editTarget, setEditTarget] = useState<Appointment | null>(null);
   const [completeTarget, setCompleteTarget] = useState<Appointment | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    apiGetServiceOrders(token)
+      .then((data) => setServices(data.map(mapApiServiceOrder)))
+      .catch(() => {});
+  }, [token]);
 
   // ── Filtros ───────────────────────────────────────────────────────────────
   const inPeriod = (s: Appointment) =>
