@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef } from "react";
-import { Plus, Pencil, Power, PowerOff, Car, Landmark, Trash2, Download, Upload, Square, CheckSquare } from "lucide-react";
+import { Plus, Pencil, Power, PowerOff, Car, Landmark, Wrench, Trash2, Download, Upload, Square, CheckSquare } from "lucide-react";
 import { useServiceCatalogStore } from "@/store/service-catalog-store";
 import { useAuthStore } from "@/store/auth-store";
 import type { ServiceCatalog, ServiceCategory } from "@/types";
@@ -23,16 +23,19 @@ const CATEGORY_LABEL: Record<ServiceCategory | "all", string> = {
   all:          "Todos",
   automotive:   "Automotivo",
   architecture: "Arquitetura",
+  general:      "Geral",
 };
 
 const CATEGORY_ICON: Record<ServiceCategory, React.ElementType> = {
   automotive:   Car,
   architecture: Landmark,
+  general:      Wrench,
 };
 
 const CATEGORY_COLOR: Record<ServiceCategory, string> = {
   automotive:   "bg-blue-500/10 text-blue-500",
   architecture: "bg-violet-500/10 text-violet-500",
+  general:      "bg-zinc-500/10 text-zinc-500",
 };
 
 type CategoryFilter = ServiceCategory | "all";
@@ -69,6 +72,7 @@ export default function ServicosPage() {
     all:          services.length,
     automotive:   services.filter((s) => s.category === "automotive").length,
     architecture: services.filter((s) => s.category === "architecture").length,
+    general:      services.filter((s) => s.category === "general").length,
   }), [services]);
 
   const allFilteredSelected = filtered.length > 0 && filtered.every((s) => selectedIds.has(s.id));
@@ -205,7 +209,7 @@ export default function ServicosPage() {
             </button>
           )}
 
-          {(["all", "automotive", "architecture"] as CategoryFilter[]).map((cat) => (
+          {(["all", "automotive", "architecture", "general"] as CategoryFilter[]).map((cat) => (
             <button
               key={cat}
               onClick={() => setTab(cat)}

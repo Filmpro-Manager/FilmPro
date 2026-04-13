@@ -428,7 +428,7 @@ export interface SubscriptionInfo {
 
 // ─── Service Catalog ─────────────────────────────────────────────────────────
 
-export type ServiceCategory = "automotive" | "architecture";
+export type ServiceCategory = "automotive" | "architecture" | "general";
 
 export interface ServiceCatalog {
   id: string;

@@ -160,6 +160,7 @@ export function ServiceFormDialog({ open, onOpenChange, service }: ServiceFormDi
                   <SelectContent>
                     <SelectItem value="automotive">Automotivo</SelectItem>
                     <SelectItem value="architecture">Arquitetura</SelectItem>
+                    <SelectItem value="general">Geral</SelectItem>
                   </SelectContent>
                 </Select>
               )}
