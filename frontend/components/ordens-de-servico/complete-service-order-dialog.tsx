@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/shared/form-field";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, localToday } from "@/lib/utils";
 import { apiCompleteServiceOrder } from "@/lib/api";
 import { useAuthStore } from "@/store/auth-store";
 import { useServicesStore } from "@/store/services-store";
@@ -58,7 +58,7 @@ export function CompleteServiceOrderDialog({
   const addTransaction = useTransactionsStore((s) => s.addTransaction);
   const [showInstallments, setShowInstallments] = useState(false);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
 
   const {
     register,

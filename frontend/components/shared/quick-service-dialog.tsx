@@ -27,6 +27,7 @@ import { useClientsStore } from "@/store/clients-store";
 import { useEmployeesStore } from "@/store/employees-store";
 import { useProductsStore } from "@/store/products-store";
 import { toast } from "sonner";
+import { localToday } from "@/lib/utils";
 
 const PAYMENT_METHODS = [
   "PIX",
@@ -60,7 +61,7 @@ export function QuickServiceDialog({ open, onOpenChange }: QuickServiceDialogPro
   const allCatalogServices = useServiceCatalogStore((s) => s.services);
   const catalogServices = useMemo(() => allCatalogServices.filter((sv) => sv.isActive), [allCatalogServices]);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
 
   const {
     register,

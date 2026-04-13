@@ -40,7 +40,7 @@ import { useServiceCatalogStore } from "@/store/service-catalog-store";
 import { useProductsStore } from "@/store/products-store";
 import { useAuthStore } from "@/store/auth-store";
 import { maskCurrency, parseCurrency } from "@/lib/masks";
-import { cn } from "@/lib/utils";
+import { cn, localToday } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   apiCreateQuote,
@@ -51,7 +51,7 @@ import {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function todayStr(): string {
-  return new Date().toISOString().split("T")[0];
+  return localToday();
 }
 function calcItemTotal(item: QuoteItem): number {
   const gross = item.unitPrice * item.quantity;
