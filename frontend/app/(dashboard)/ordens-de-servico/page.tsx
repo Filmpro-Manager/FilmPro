@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import {
   Search, Zap, ClipboardList, CheckCircle2, Clock, XCircle,
-  Calendar, MoreHorizontal, ChevronDown, Trash2, Car, Landmark,
+  Calendar, MoreHorizontal, ChevronDown, Trash2, Car, Landmark, Wrench,
   ChevronLeft, ChevronRight, CalendarDays,
 } from "lucide-react";
 import { useServicesStore } from "@/store/services-store";
@@ -59,16 +59,19 @@ function categoryOf(s: Appointment): ServiceCategory {
 const CATEGORY_LABELS: Record<ServiceCategory, string> = {
   automotive: "Automotivo",
   architecture: "Arquitetura",
+  general: "Geral",
 };
 
 const CATEGORY_ICONS: Record<ServiceCategory, React.ElementType> = {
   automotive: Car,
   architecture: Landmark,
+  general: Wrench,
 };
 
 const CATEGORY_COLORS: Record<ServiceCategory, string> = {
   automotive: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
   architecture: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+  general: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400",
 };
 
 const MONTH_NAMES_OS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];

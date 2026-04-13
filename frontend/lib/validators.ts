@@ -275,7 +275,7 @@ export type QuickServiceInput = z.infer<typeof quickServiceSchema>;
 export const serviceCatalogSchema = z.object({
   name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres"),
   description: z.string().optional(),
-  price: z.number().min(0).default(0),
+  price: z.number().min(0),
   category: z.enum(["automotive", "architecture", "general"]),
   isActive: z.boolean(),
 });

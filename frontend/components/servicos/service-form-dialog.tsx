@@ -47,7 +47,7 @@ export function ServiceFormDialog({ open, onOpenChange, service }: ServiceFormDi
     formState: { errors, isSubmitting },
   } = useForm<ServiceCatalogInput>({
     resolver: zodResolver(serviceCatalogSchema),
-    defaultValues: { isActive: true },
+    defaultValues: { isActive: true, price: 0 },
   });
 
   const addService = useServiceCatalogStore((s) => s.addService);
