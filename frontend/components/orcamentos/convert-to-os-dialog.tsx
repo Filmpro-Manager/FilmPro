@@ -21,7 +21,8 @@ import { useServicesStore } from "@/store/services-store";
 import { useQuotesStore } from "@/store/quotes-store";
 import { apiCreateServiceOrder } from "@/lib/api";
 import { toast } from "sonner";
-import { formatCurrency, localToday, cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 // ─── Mapper ───────────────────────────────────────────────────────────────────
 
@@ -84,7 +85,7 @@ export function ConvertToOSDialog({
   quote,
   onSuccess,
 }: ConvertToOSDialogProps) {
-  const today = localToday();
+  const today = new Date().toISOString().slice(0, 10);
 
   const { token } = useAuthStore();
   const { addService } = useServicesStore();

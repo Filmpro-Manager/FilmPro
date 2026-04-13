@@ -15,16 +15,8 @@ export function formatCurrency(value: number): string {
   }).format(value);
 }
 
-/** Retorna a data local de hoje no formato YYYY-MM-DD (sem conversão UTC) */
-export function localToday(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
 export function formatDate(date: string | Date, pattern = "dd/MM/yyyy"): string {
-  const d = typeof date === "string"
-    ? new Date(date.length === 10 ? `${date}T00:00:00` : date)
-    : date;
+  const d = typeof date === "string" ? new Date(date) : date;
   return format(d, pattern, { locale: ptBR });
 }
 
