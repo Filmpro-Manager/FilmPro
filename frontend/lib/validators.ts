@@ -276,7 +276,7 @@ export const serviceCatalogSchema = z.object({
   name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres"),
   description: z.string().optional(),
   price: z.number().min(0),
-  category: z.enum(["automotive", "architecture", "general"]),
+  category: z.enum(["automotive", "architecture", "general"], { message: "Selecione uma categoria" }),
   isActive: z.boolean(),
 });
 

@@ -67,14 +67,14 @@ export function ServiceFormDialog({ open, onOpenChange, service }: ServiceFormDi
         service.price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })
       );
     } else if (open && !service) {
-      reset({ isActive: true });
+      reset({ isActive: true, price: 0 });
       setValueDisplay("");
     }
   }, [open, service, reset]);
 
   function handleOpenChange(next: boolean) {
     if (!next) {
-      reset({ isActive: true });
+      reset({ isActive: true, price: 0 });
       setValueDisplay("");
     }
     onOpenChange(next);
